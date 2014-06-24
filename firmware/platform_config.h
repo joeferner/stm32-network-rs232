@@ -14,4 +14,12 @@
 #define DEBUG_USART_RX         GPIOA
 #define DEBUG_USART_RX_PIN     GPIO_Pin_10
 
+// SPI1 pins: SCK (GPIOA - pin 5)
+// SPI1 pins: MOSI (GPIOA - pin 7)
+// SPI1 pins: MISO (GPIOA - pin 6)
+
+#define ENC28J60_CS_RCC        RCC_APB2Periph_GPIOA
+#define ENC28J60_CS_PORT       GPIOA
+#define ENC28J60_CS_PIN        GPIO_Pin_3
+
 #endif // PLATFORM_CONFIG_H_INCLUDED

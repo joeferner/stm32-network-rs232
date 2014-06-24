@@ -1,6 +1,6 @@
-
 #include <stm32f10x_gpio.h>
 #include <stm32f10x_usart.h>
+#include <stm32f10x_rcc.h>
 #include <misc.h>
 #include <string.h>
 #include "debug.h"
@@ -8,14 +8,26 @@
 #include "time.h"
 #include "ring_buffer.h"
 #include "platform_config.h"
+#include "enc28j60.h"
 
 void setup();
 void loop();
+void spi_setup();
+void network_setup();
+
+void enc28j60_spi_assert();
+void enc28j60_spi_deassert();
+uint8_t enc28j60_spi_transfer(uint8_t d);
 
 #define MAX_LINE_LENGTH 100
 #define INPUT_BUFFER_SIZE 100
 uint8_t g_usartInputBuffer[INPUT_BUFFER_SIZE];
 ring_buffer_u8 g_usartInputRingBuffer;
+
+uint8_t IP_ADDRESS[4] = {192, 168, 0, 100};
+uint8_t GATEWAY_ADDRESS[4] = {192, 168, 0, 1};
+uint8_t NETMASK_ADDRESS[4] = {255, 255, 255, 0};
+uint8_t MAC_ADDRESS[6] = {0x00, 0x01, 0x02, 0x03, 0x04, 0x05};
 
 int main(void) {
   setup();
@@ -35,6 +47,9 @@ void setup() {
   debug_write_line("?BEGIN setup");
 
   ring_buffer_u8_init(&g_usartInputRingBuffer, g_usartInputBuffer, INPUT_BUFFER_SIZE);
+
+  spi_setup();
+  network_setup();
 
   time_setup();
 
@@ -81,4 +96,75 @@ void on_usart1_irq() {
       }
     }
   }
+}
+
+void spi_setup() {
+  debug_write_line("?spi_setup");
+
+  SPI_InitTypeDef spiInitStruct;
+  GPIO_InitTypeDef gpioConfig;
+
+  RCC_APB2PeriphClockCmd(RCC_APB2Periph_GPIOA | RCC_APB2Periph_SPI1, ENABLE);
+
+  enc28j60_spi_deassert(); // set pin high before initializing as output pin to not false trigger CS
+  RCC_APB2PeriphClockCmd(ENC28J60_CS_RCC, ENABLE);
+  gpioConfig.GPIO_Pin = ENC28J60_CS_PIN;
+  gpioConfig.GPIO_Mode = GPIO_Mode_Out_PP;
+  gpioConfig.GPIO_Speed = GPIO_Speed_50MHz;
+  GPIO_Init(ENC28J60_CS_PORT, &gpioConfig);
+  enc28j60_spi_deassert();
+
+  // Configure SPI1 pins: SCK (pin 5) and MOSI (pin 7)
+  gpioConfig.GPIO_Pin = GPIO_Pin_5 | GPIO_Pin_7;
+  gpioConfig.GPIO_Speed = GPIO_Speed_50MHz;
+  gpioConfig.GPIO_Mode = GPIO_Mode_AF_PP;
+  GPIO_Init(GPIOA, &gpioConfig);
+
+  // Configure SPI1 pins: MISO (pin 6)
+  gpioConfig.GPIO_Pin = GPIO_Pin_6;
+  gpioConfig.GPIO_Mode = GPIO_Mode_IN_FLOATING;
+  GPIO_Init(GPIOA, &gpioConfig);
+
+  // init SPI
+  SPI_StructInit(&spiInitStruct);
+  spiInitStruct.SPI_Direction = SPI_Direction_2Lines_FullDuplex;
+  spiInitStruct.SPI_Mode = SPI_Mode_Master;
+  spiInitStruct.SPI_DataSize = SPI_DataSize_8b;
+  spiInitStruct.SPI_NSS = SPI_NSS_Soft;
+  spiInitStruct.SPI_BaudRatePrescaler = SPI_BaudRatePrescaler_64;
+  spiInitStruct.SPI_FirstBit = SPI_FirstBit_MSB;
+
+  // Mode 1 (CPOL = 0, CPHA = 1)
+  spiInitStruct.SPI_CPOL = SPI_CPOL_Low;
+  spiInitStruct.SPI_CPHA = SPI_CPHA_2Edge;
+
+  SPI_Init(SPI1, &spiInitStruct);
+
+  SPI_Cmd(SPI1, ENABLE);
+}
+
+void network_setup() {
+  uip_ipaddr_t ipaddr;
+  uip_ipaddr_t gatewayAddr;
+  uip_ipaddr_t netmaskAddr;
+  uip_ipaddr(&ipaddr, IP_ADDRESS[0], IP_ADDRESS[1], IP_ADDRESS[2], IP_ADDRESS[3]);
+  uip_ipaddr(&gatewayAddr, GATEWAY_ADDRESS[0], GATEWAY_ADDRESS[1], GATEWAY_ADDRESS[2], GATEWAY_ADDRESS[3]);
+  uip_ipaddr(&netmaskAddr, NETMASK_ADDRESS[0], NETMASK_ADDRESS[1], NETMASK_ADDRESS[2], NETMASK_ADDRESS[3]);
+
+  enc28j60_setup(MAC_ADDRESS, &ipaddr, &gatewayAddr, &netmaskAddr);
+}
+
+void enc28j60_spi_assert() {
+  GPIO_ResetBits(ENC28J60_CS_PORT, ENC28J60_CS_PIN);
+}
+
+void enc28j60_spi_deassert() {
+  GPIO_SetBits(ENC28J60_CS_PORT, ENC28J60_CS_PIN);
+}
+
+uint8_t enc28j60_spi_transfer(uint8_t d) {
+  while (SPI_I2S_GetFlagStatus(SPI1, SPI_I2S_FLAG_TXE) == RESET);
+  SPI_I2S_SendData(SPI1, d);
+  while (SPI_I2S_GetFlagStatus(SPI1, SPI_I2S_FLAG_RXNE) == RESET);
+  return SPI_I2S_ReceiveData(SPI1);
 }
