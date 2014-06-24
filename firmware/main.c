@@ -43,6 +43,10 @@ void setup() {
 }
 
 void loop() {
+  delay_ms(1000);
+  debug_led_set(0);
+  delay_ms(1000);
+  debug_led_set(1);
 }
 
 void assert_failed(uint8_t* file, uint32_t line) {
