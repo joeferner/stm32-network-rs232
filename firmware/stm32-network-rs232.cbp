@@ -31,9 +31,85 @@
 		<Compiler>
 			<Add option="-Wall" />
 		</Compiler>
+		<Unit filename="CMakeLists.txt" />
+		<Unit filename="build.sh" />
+		<Unit filename="debug.c">
+			<Option compilerVar="CC" />
+		</Unit>
+		<Unit filename="debug.h" />
+		<Unit filename="delay.c">
+			<Option compilerVar="CC" />
+		</Unit>
+		<Unit filename="delay.h" />
+		<Unit filename="enc28j60.c">
+			<Option compilerVar="CC" />
+		</Unit>
+		<Unit filename="enc28j60.h" />
+		<Unit filename="gcc_stm32.cmake" />
+		<Unit filename="interrupts.c">
+			<Option compilerVar="CC" />
+		</Unit>
 		<Unit filename="main.c">
 			<Option compilerVar="CC" />
 		</Unit>
+		<Unit filename="openocd.cfg" />
+		<Unit filename="openocd.telnet.cfg" />
+		<Unit filename="platform_config.h" />
+		<Unit filename="ring_buffer.c">
+			<Option compilerVar="CC" />
+		</Unit>
+		<Unit filename="ring_buffer.h" />
+		<Unit filename="run-cmake.sh" />
+		<Unit filename="stm32_flash.ld.in" />
+		<Unit filename="stm32f10x_conf.h" />
+		<Unit filename="system_stm32f10x.c">
+			<Option compilerVar="CC" />
+		</Unit>
+		<Unit filename="time.c">
+			<Option compilerVar="CC" />
+		</Unit>
+		<Unit filename="time.h" />
+		<Unit filename="uip-conf.h" />
+		<Unit filename="uip/clock.h" />
+		<Unit filename="uip/lc-addrlabels.h" />
+		<Unit filename="uip/lc-switch.h" />
+		<Unit filename="uip/lc.h" />
+		<Unit filename="uip/psock.c">
+			<Option compilerVar="CC" />
+		</Unit>
+		<Unit filename="uip/psock.h" />
+		<Unit filename="uip/pt.h" />
+		<Unit filename="uip/timer.c">
+			<Option compilerVar="CC" />
+		</Unit>
+		<Unit filename="uip/timer.h" />
+		<Unit filename="uip/uip-fw.c">
+			<Option compilerVar="CC" />
+		</Unit>
+		<Unit filename="uip/uip-fw.h" />
+		<Unit filename="uip/uip-neighbor.c">
+			<Option compilerVar="CC" />
+		</Unit>
+		<Unit filename="uip/uip-neighbor.h" />
+		<Unit filename="uip/uip-split.c">
+			<Option compilerVar="CC" />
+		</Unit>
+		<Unit filename="uip/uip-split.h" />
+		<Unit filename="uip/uip.c">
+			<Option compilerVar="CC" />
+		</Unit>
+		<Unit filename="uip/uip.h" />
+		<Unit filename="uip/uip_arch.h" />
+		<Unit filename="uip/uip_arp.c">
+			<Option compilerVar="CC" />
+		</Unit>
+		<Unit filename="uip/uip_arp.h" />
+		<Unit filename="uip/uiplib.c">
+			<Option compilerVar="CC" />
+		</Unit>
+		<Unit filename="uip/uiplib.h" />
+		<Unit filename="uip/uipopt.h" />
+		<Unit filename="upload.sh" />
 		<Extensions>
 			<code_completion />
 			<envvars />
