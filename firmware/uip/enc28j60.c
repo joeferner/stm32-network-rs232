@@ -1,6 +1,14 @@
 #include "enc28j60.h"
 #include "enc28j60_constants.h"
 #include "delay.h"
+#include "debug.h"
+#include "uip_arp.h"
+#include "timer.h"
+
+uint8_t _enc28j60_send();
+uint16_t _enc28j60_receivePacket(uint8_t* buffer, uint16_t bufferLength);
+
+void _enc28j60_setERXRDPT();
 
 void _enc28j60_writeOp(uint8_t op, uint8_t address, uint8_t data);
 void _enc28j60_writeRegPair(uint8_t address, uint16_t data);
@@ -10,10 +18,13 @@ void _enc28j60_setBank(uint8_t address);
 uint8_t _enc28j60_readReg(uint8_t address);
 uint8_t _enc28j60_readOp(uint8_t op, uint8_t address);
 
+struct timer _enc28j60_periodicTimer;
 uint16_t _enc28j60_nextPacketPtr;
 uint8_t _enc28j60_bank = 0xff;
 
 void enc28j60_setup(uint8_t* macAddress) {
+  timer_set(&_enc28j60_periodicTimer, CLOCK_SECOND / 4);
+
   // perform system reset
   _enc28j60_writeOp(ENC28J60_SOFT_RESET, 0, ENC28J60_SOFT_RESET);
   delay_ms(50);
@@ -100,6 +111,132 @@ void enc28j60_setup(uint8_t* macAddress) {
 
   //Configure leds
   _enc28j60_phyWrite(PHLCON,0x476);
+}
+
+void enc28j60_tick() {
+  uip_len = _enc28j60_receivePacket(((uint8_t*)uip_buf), UIP_BUFSIZE);
+  if(uip_len > 0) {
+    debug_write("?receivePacket: ");
+    debug_write_u16(uip_len, 10);
+    debug_write_line("");
+
+    uint16_t packetType = ((struct uip_eth_hdr *)&uip_buf[0])->type;
+    if (packetType == HTONS(UIP_ETHTYPE_IP)) {
+      debug_write_line("?readPacket type IP");
+      uip_arp_ipin();
+      uip_input();
+      if (uip_len > 0) {
+        uip_arp_out();
+        _enc28j60_send();
+      }
+    } else if (packetType == HTONS(UIP_ETHTYPE_ARP)) {
+      debug_write_line("?readPacket type ARP");
+      uip_arp_arpin();
+      if (uip_len > 0) {
+        _enc28j60_send();
+      }
+    }
+  }
+
+  if (timer_expired(&_enc28j60_periodicTimer)) {
+    timer_restart(&_enc28j60_periodicTimer);
+    for (int i = 0; i < UIP_CONNS; i++) {
+      uip_periodic(i);
+      // If the above function invocation resulted in data that
+      // should be sent out on the Enc28J60Network, the global variable
+      // uip_len is set to a value > 0.
+      if (uip_len > 0) {
+        uip_arp_out();
+        _enc28j60_send();
+      }
+    }
+
+#if UIP_UDP
+    for (int i = 0; i < UIP_UDP_CONNS; i++) {
+      uip_udp_periodic(i);
+      // If the above function invocation resulted in data that
+      // should be sent out on the Enc28J60Network, the global variable
+      // uip_len is set to a value > 0. */
+      if (uip_len > 0) {
+        UIPUDP::_send((uip_udp_userdata_t *)(uip_udp_conns[i].appstate));
+      }
+    }
+#endif /* UIP_UDP */
+  }
+}
+
+uint16_t _enc28j60_receivePacket(uint8_t* buffer, uint16_t bufferLength) {
+  uint16_t rxstat;
+  uint16_t len;
+
+  // check if a packet has been received and buffered
+  //if( !(_enc28j60_readReg(EIR) & EIR_PKTIF) ){
+  // The above does not work. See Rev. B4 Silicon Errata point 6.
+  if (_enc28j60_readReg(EPKTCNT) == 0) {
+    return;
+  }
+
+  uint16_t readPtr = _enc28j60_nextPacketPtr + 6;
+
+  // Set the read pointer to the start of the received packet
+  _enc28j60_writeRegPair(ERDPTL, _enc28j60_nextPacketPtr);
+
+  // read the next packet pointer
+  _enc28j60_nextPacketPtr = _enc28j60_readOp(ENC28J60_READ_BUF_MEM, 0);
+  _enc28j60_nextPacketPtr |= _enc28j60_readOp(ENC28J60_READ_BUF_MEM, 0) << 8;
+
+  // read the packet length (see datasheet page 43)
+  len = _enc28j60_readOp(ENC28J60_READ_BUF_MEM, 0);
+  len |= _enc28j60_readOp(ENC28J60_READ_BUF_MEM, 0) << 8;
+  len -= 4; //remove the CRC count
+
+  // read the receive status (see datasheet page 43)
+  rxstat = _enc28j60_readOp(ENC28J60_READ_BUF_MEM, 0);
+  rxstat |= _enc28j60_readOp(ENC28J60_READ_BUF_MEM, 0) << 8;
+
+  readBuffer;
+
+  // Move the RX read pointer to the start of the next received packet
+  // This frees the memory we just read out
+  _enc28j60_setERXRDPT();
+
+  // decrement the packet counter indicate we are done with this packet
+  _enc28j60_writeOp(ENC28J60_BIT_FIELD_SET, ECON2, ECON2_PKTDEC);
+
+  return len;
+}
+
+uint8_t _enc28j60_send() {
+  if (_network_packetState & UIPETHERNET_SENDPACKET) {
+    debug_write("?Enc28J60Network_send uip_packet: ");
+    debug_write(uip_packet);
+    debug_write(", hdrlen: ");
+    debug_write(_network_uip_headerLength);
+    debug_write_line("");
+    _enc28j60_writePacket(uip_packet, 0, uip_buf, _network_uip_headerLength);
+    goto sendandfree;
+  }
+  uip_packet = _enc28j60_allocBlock(uip_len);
+  if (uip_packet != NOBLOCK) {
+#ifdef UIPETHERNET_DEBUG
+    Serial.print(F("Enc28J60Network_send uip_buf (uip_len): "));
+    Serial.print(uip_len);
+    Serial.print(F(", packet: "));
+    Serial.println(uip_packet);
+#endif
+    _enc28j60_writePacket(uip_packet, 0, uip_buf, uip_len);
+    goto sendandfree;
+  }
+  return 0;
+sendandfree:
+  _enc28j60_sendPacket(uip_packet);
+  _enc28j60_freeBlock(uip_packet);
+  uip_packet = NOBLOCK;
+  return 1;
+}
+
+void _enc28j60_setERXRDPT() {
+  _enc28j60_writeRegPair(ERXRDPTL, nextPacketPtr == RXSTART_INIT ? RXSTOP_INIT : nextPacketPtr - 1);
 }
 
 void _enc28j60_writeReg(uint8_t address, uint8_t data) {
