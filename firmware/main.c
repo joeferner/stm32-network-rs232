@@ -8,7 +8,7 @@
 #include "time.h"
 #include "ring_buffer.h"
 #include "platform_config.h"
-#include "enc28j60.h"
+#include "network.h"
 
 void setup();
 void loop();
@@ -24,8 +24,8 @@ uint8_t enc28j60_spi_transfer(uint8_t d);
 uint8_t g_usartInputBuffer[INPUT_BUFFER_SIZE];
 ring_buffer_u8 g_usartInputRingBuffer;
 
-uint8_t IP_ADDRESS[4] = {192, 168, 0, 100};
-uint8_t GATEWAY_ADDRESS[4] = {192, 168, 0, 1};
+uint8_t IP_ADDRESS[4] = {192, 168, 1, 101};
+uint8_t GATEWAY_ADDRESS[4] = {192, 168, 1, 1};
 uint8_t NETMASK_ADDRESS[4] = {255, 255, 255, 0};
 uint8_t MAC_ADDRESS[6] = {0x00, 0x01, 0x02, 0x03, 0x04, 0x05};
 
@@ -58,6 +58,7 @@ void setup() {
 }
 
 void loop() {
+  network_tick();
   delay_ms(1000);
   debug_led_set(0);
   delay_ms(1000);
@@ -143,28 +144,3 @@ void spi_setup() {
   SPI_Cmd(SPI1, ENABLE);
 }
 
-void network_setup() {
-  uip_ipaddr_t ipaddr;
-  uip_ipaddr_t gatewayAddr;
-  uip_ipaddr_t netmaskAddr;
-  uip_ipaddr(&ipaddr, IP_ADDRESS[0], IP_ADDRESS[1], IP_ADDRESS[2], IP_ADDRESS[3]);
-  uip_ipaddr(&gatewayAddr, GATEWAY_ADDRESS[0], GATEWAY_ADDRESS[1], GATEWAY_ADDRESS[2], GATEWAY_ADDRESS[3]);
-  uip_ipaddr(&netmaskAddr, NETMASK_ADDRESS[0], NETMASK_ADDRESS[1], NETMASK_ADDRESS[2], NETMASK_ADDRESS[3]);
-
-  enc28j60_setup(MAC_ADDRESS, &ipaddr, &gatewayAddr, &netmaskAddr);
-}
-
-void enc28j60_spi_assert() {
-  GPIO_ResetBits(ENC28J60_CS_PORT, ENC28J60_CS_PIN);
-}
-
-void enc28j60_spi_deassert() {
-  GPIO_SetBits(ENC28J60_CS_PORT, ENC28J60_CS_PIN);
-}
-
-uint8_t enc28j60_spi_transfer(uint8_t d) {
-  while (SPI_I2S_GetFlagStatus(SPI1, SPI_I2S_FLAG_TXE) == RESET);
-  SPI_I2S_SendData(SPI1, d);
-  while (SPI_I2S_GetFlagStatus(SPI1, SPI_I2S_FLAG_RXNE) == RESET);
-  return SPI_I2S_ReceiveData(SPI1);
-}

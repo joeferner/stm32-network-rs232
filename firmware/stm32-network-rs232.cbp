@@ -31,7 +31,9 @@
 		<Compiler>
 			<Add option="-Wall" />
 		</Compiler>
+		<Unit filename=".gitignore" />
 		<Unit filename="CMakeLists.txt" />
+		<Unit filename="README.md" />
 		<Unit filename="build.sh" />
 		<Unit filename="debug.c">
 			<Option compilerVar="CC" />
@@ -41,10 +43,6 @@
 			<Option compilerVar="CC" />
 		</Unit>
 		<Unit filename="delay.h" />
-		<Unit filename="enc28j60.c">
-			<Option compilerVar="CC" />
-		</Unit>
-		<Unit filename="enc28j60.h" />
 		<Unit filename="gcc_stm32.cmake" />
 		<Unit filename="interrupts.c">
 			<Option compilerVar="CC" />
@@ -52,6 +50,10 @@
 		<Unit filename="main.c">
 			<Option compilerVar="CC" />
 		</Unit>
+		<Unit filename="network.c">
+			<Option compilerVar="CC" />
+		</Unit>
+		<Unit filename="network.h" />
 		<Unit filename="openocd.cfg" />
 		<Unit filename="openocd.telnet.cfg" />
 		<Unit filename="platform_config.h" />
@@ -70,7 +72,16 @@
 		</Unit>
 		<Unit filename="time.h" />
 		<Unit filename="uip-conf.h" />
+		<Unit filename="uip/clock-arch.c">
+			<Option compilerVar="CC" />
+		</Unit>
+		<Unit filename="uip/clock-arch.h" />
 		<Unit filename="uip/clock.h" />
+		<Unit filename="uip/enc28j60.c">
+			<Option compilerVar="CC" />
+		</Unit>
+		<Unit filename="uip/enc28j60.h" />
+		<Unit filename="uip/enc28j60_constants.h" />
 		<Unit filename="uip/lc-addrlabels.h" />
 		<Unit filename="uip/lc-switch.h" />
 		<Unit filename="uip/lc.h" />

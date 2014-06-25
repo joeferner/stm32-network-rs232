@@ -48,14 +48,18 @@ SET(PROJECT_SOURCES
   system_stm32f10x.c
 
   uip/uip.c
+  uip/timer.c
+  uip/uip_arp.c
+  uip/clock-arch.c
+  uip/enc28j60.c
 
   main.c
+  network.c
   interrupts.c
   debug.c
   delay.c
   time.c
   ring_buffer.c
-  enc28j60.c
 )
 
 ADD_EXECUTABLE(${CMAKE_PROJECT_NAME}.elf ${PROJECT_SOURCES} ${CMSIS_STARTUP_SOURCE})
