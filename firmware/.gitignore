@@ -1,3 +1,2 @@
 build/
-stm32-wifi-ir.layout
-connection_info.h
+stm32-network-rs232.layout
