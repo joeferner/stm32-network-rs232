@@ -57,3 +57,8 @@ uint8_t enc28j60_spi_transfer(uint8_t d) {
   return SPI_I2S_ReceiveData(SPI1);
 }
 
+void uip_appcall() {
+}
+
+void uip_udp_appcall() {
+}

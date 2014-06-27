@@ -5,11 +5,12 @@
 #include "uip_arp.h"
 #include "timer.h"
 
-uint8_t _enc28j60_send();
+void _enc28j60_send();
 uint16_t _enc28j60_receivePacket(uint8_t* buffer, uint16_t bufferLength);
 
 void _enc28j60_setERXRDPT();
 
+void _enc28j60_packetSend(uint8_t* packet1, uint16_t packet1Length, uint8_t* packet2, uint16_t packet2Length);
 void _enc28j60_writeOp(uint8_t op, uint8_t address, uint8_t data);
 void _enc28j60_writeRegPair(uint8_t address, uint16_t data);
 void _enc28j60_writeReg(uint8_t address, uint8_t data);
@@ -17,6 +18,8 @@ void _enc28j60_phyWrite(uint8_t address, uint16_t data);
 void _enc28j60_setBank(uint8_t address);
 uint8_t _enc28j60_readReg(uint8_t address);
 uint8_t _enc28j60_readOp(uint8_t op, uint8_t address);
+void _enc28j60_readBuffer(uint8_t* data, uint16_t len);
+void _enc28j60_writeBuffer(uint8_t* data, uint16_t len);
 
 struct timer _enc28j60_periodicTimer;
 uint16_t _enc28j60_nextPacketPtr;
@@ -154,11 +157,13 @@ void enc28j60_tick() {
 #if UIP_UDP
     for (int i = 0; i < UIP_UDP_CONNS; i++) {
       uip_udp_periodic(i);
+
       // If the above function invocation resulted in data that
       // should be sent out on the Enc28J60Network, the global variable
       // uip_len is set to a value > 0. */
       if (uip_len > 0) {
-        UIPUDP::_send((uip_udp_userdata_t *)(uip_udp_conns[i].appstate));
+        uip_arp_out();
+        _enc28j60_send();
       }
     }
 #endif /* UIP_UDP */
@@ -173,10 +178,8 @@ uint16_t _enc28j60_receivePacket(uint8_t* buffer, uint16_t bufferLength) {
   //if( !(_enc28j60_readReg(EIR) & EIR_PKTIF) ){
   // The above does not work. See Rev. B4 Silicon Errata point 6.
   if (_enc28j60_readReg(EPKTCNT) == 0) {
-    return;
+    return 0;
   }
-
-  uint16_t readPtr = _enc28j60_nextPacketPtr + 6;
 
   // Set the read pointer to the start of the received packet
   _enc28j60_writeRegPair(ERDPTL, _enc28j60_nextPacketPtr);
@@ -194,7 +197,7 @@ uint16_t _enc28j60_receivePacket(uint8_t* buffer, uint16_t bufferLength) {
   rxstat = _enc28j60_readOp(ENC28J60_READ_BUF_MEM, 0);
   rxstat |= _enc28j60_readOp(ENC28J60_READ_BUF_MEM, 0) << 8;
 
-  readBuffer;
+  _enc28j60_readBuffer(buffer, len);
 
   // Move the RX read pointer to the start of the next received packet
   // This frees the memory we just read out
@@ -206,37 +209,16 @@ uint16_t _enc28j60_receivePacket(uint8_t* buffer, uint16_t bufferLength) {
   return len;
 }
 
-uint8_t _enc28j60_send() {
-  if (_network_packetState & UIPETHERNET_SENDPACKET) {
-    debug_write("?Enc28J60Network_send uip_packet: ");
-    debug_write(uip_packet);
-    debug_write(", hdrlen: ");
-    debug_write(_network_uip_headerLength);
-    debug_write_line("");
-    _enc28j60_writePacket(uip_packet, 0, uip_buf, _network_uip_headerLength);
-    goto sendandfree;
+void _enc28j60_send() {
+  if(uip_len <= UIP_LLH_LEN + 40) {
+    _enc28j60_packetSend((uint8_t *)uip_buf, uip_len, 0, 0);
+  } else {
+    _enc28j60_packetSend((uint8_t *)uip_buf, 54, (uint8_t*)uip_appdata, uip_len - UIP_LLH_LEN - 40);
   }
-  uip_packet = _enc28j60_allocBlock(uip_len);
-  if (uip_packet != NOBLOCK) {
-#ifdef UIPETHERNET_DEBUG
-    Serial.print(F("Enc28J60Network_send uip_buf (uip_len): "));
-    Serial.print(uip_len);
-    Serial.print(F(", packet: "));
-    Serial.println(uip_packet);
-#endif
-    _enc28j60_writePacket(uip_packet, 0, uip_buf, uip_len);
-    goto sendandfree;
-  }
-  return 0;
-sendandfree:
-  _enc28j60_sendPacket(uip_packet);
-  _enc28j60_freeBlock(uip_packet);
-  uip_packet = NOBLOCK;
-  return 1;
 }
 
 void _enc28j60_setERXRDPT() {
-  _enc28j60_writeRegPair(ERXRDPTL, nextPacketPtr == RXSTART_INIT ? RXSTOP_INIT : nextPacketPtr - 1);
+  _enc28j60_writeRegPair(ERXRDPTL, _enc28j60_nextPacketPtr == RXSTART_INIT ? RXSTOP_INIT : _enc28j60_nextPacketPtr - 1);
 }
 
 void _enc28j60_writeReg(uint8_t address, uint8_t data) {
@@ -303,6 +285,32 @@ uint8_t _enc28j60_readOp(uint8_t op, uint8_t address) {
   return result;
 }
 
+void _enc28j60_packetSend(uint8_t* packet1, uint16_t packet1Length, uint8_t* packet2, uint16_t packet2Length) {
+  //Errata: Transmit Logic reset
+  _enc28j60_writeOp(ENC28J60_BIT_FIELD_SET, ECON1, ECON1_TXRST);
+  _enc28j60_writeOp(ENC28J60_BIT_FIELD_CLR, ECON1, ECON1_TXRST);
+
+  // Set the write pointer to start of transmit buffer area
+  _enc28j60_writeReg(EWRPTL, TXSTART_INIT & 0xff);
+  _enc28j60_writeReg(EWRPTH, TXSTART_INIT >> 8);
+
+  // Set the TXND pointer to correspond to the packet size given
+  _enc28j60_writeReg(ETXNDL, (TXSTART_INIT + packet1Length + packet2Length));
+  _enc28j60_writeReg(ETXNDH, (TXSTART_INIT + packet1Length + packet2Length) >> 8);
+
+  // write per-packet control byte
+  _enc28j60_writeOp(ENC28J60_WRITE_BUF_MEM, 0, 0x00);
+
+  // copy the packet into the transmit buffer
+  _enc28j60_writeBuffer(packet1, packet1Length);
+  if(packet2Length > 0) {
+    _enc28j60_writeBuffer(packet2, packet2Length);
+  }
+
+  // send the contents of the transmit buffer onto the network
+  _enc28j60_writeOp(ENC28J60_BIT_FIELD_SET, ECON1, ECON1_TXRTS);
+}
+
 void _enc28j60_writeOp(uint8_t op, uint8_t address, uint8_t data) {
   enc28j60_spi_assert();
   enc28j60_spi_transfer(op | (address & ADDR_MASK));
@@ -310,3 +318,24 @@ void _enc28j60_writeOp(uint8_t op, uint8_t address, uint8_t data) {
   enc28j60_spi_deassert();
 }
 
+void _enc28j60_readBuffer(uint8_t* data, uint16_t len) {
+  enc28j60_spi_assert();
+
+  enc28j60_spi_transfer(ENC28J60_READ_BUF_MEM);
+  while(len--) {
+    *data++ = enc28j60_spi_transfer(0x00);
+  }
+
+  enc28j60_spi_deassert();
+}
+
+void _enc28j60_writeBuffer(uint8_t* data, uint16_t len) {
+  enc28j60_spi_assert();
+
+  enc28j60_spi_transfer(ENC28J60_WRITE_BUF_MEM);
+  while(len--) {
+    enc28j60_spi_transfer(*data++);
+  }
+
+  enc28j60_spi_deassert();
+}

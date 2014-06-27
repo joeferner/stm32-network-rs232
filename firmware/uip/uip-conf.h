@@ -142,18 +142,18 @@ typedef unsigned short uip_stats_t;
 
 typedef void* uip_tcp_appstate_t;
 
-void uipclient_appcall(void);
+void uip_appcall(void);
 
-#define UIP_APPCALL uipclient_appcall
+#define UIP_APPCALL uip_appcall
 
 typedef void* uip_udp_appstate_t;
 
-void uipudp_appcall(void);
+void uip_udp_appcall(void);
 
-#define UIP_UDP_APPCALL uipudp_appcall
+#define UIP_UDP_APPCALL uip_udp_appcall
 
 #define CC_REGISTER_ARG register
 
-#define UIP_ARCH_CHKSUM 1
+//#define UIP_ARCH_CHKSUM 1
 
 #endif /* __UIP_CONF_H__ */
