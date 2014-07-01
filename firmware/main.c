@@ -59,10 +59,10 @@ void setup() {
 
 void loop() {
   network_tick();
-  delay_ms(1000);
-  debug_led_set(0);
-  delay_ms(1000);
-  debug_led_set(1);
+  //delay_ms(1000);
+  //debug_led_set(0);
+  //delay_ms(1000);
+  //debug_led_set(1);
 }
 
 void assert_failed(uint8_t* file, uint32_t line) {
@@ -107,6 +107,14 @@ void spi_setup() {
 
   RCC_APB2PeriphClockCmd(RCC_APB2Periph_GPIOA | RCC_APB2Periph_SPI1, ENABLE);
 
+  enc28j60_reset_deassert();
+  RCC_APB2PeriphClockCmd(ENC28J60_RESET_RCC, ENABLE);
+  gpioConfig.GPIO_Pin = ENC28J60_RESET_PIN;
+  gpioConfig.GPIO_Mode = GPIO_Mode_Out_PP;
+  gpioConfig.GPIO_Speed = GPIO_Speed_50MHz;
+  GPIO_Init(ENC28J60_RESET_PORT, &gpioConfig);
+  enc28j60_reset_deassert();
+
   enc28j60_spi_deassert(); // set pin high before initializing as output pin to not false trigger CS
   RCC_APB2PeriphClockCmd(ENC28J60_CS_RCC, ENABLE);
   gpioConfig.GPIO_Pin = ENC28J60_CS_PIN;
@@ -132,12 +140,12 @@ void spi_setup() {
   spiInitStruct.SPI_Mode = SPI_Mode_Master;
   spiInitStruct.SPI_DataSize = SPI_DataSize_8b;
   spiInitStruct.SPI_NSS = SPI_NSS_Soft;
-  spiInitStruct.SPI_BaudRatePrescaler = SPI_BaudRatePrescaler_256;
+  spiInitStruct.SPI_BaudRatePrescaler = SPI_BaudRatePrescaler_16;
   spiInitStruct.SPI_FirstBit = SPI_FirstBit_MSB;
 
   // Mode 0 (CPOL = 0, CPHA = 0)
   spiInitStruct.SPI_CPOL = SPI_CPOL_Low;
-  spiInitStruct.SPI_CPHA = SPI_CPHA_2Edge;
+  spiInitStruct.SPI_CPHA = SPI_CPHA_1Edge;
 
   SPI_Init(SPI1, &spiInitStruct);
 

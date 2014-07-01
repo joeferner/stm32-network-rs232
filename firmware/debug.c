@@ -75,7 +75,7 @@ void debug_write_uip_eth_addr(struct uip_eth_addr* addr) {
     if(i > 0) {
       debug_write(":");
     }
-    debug_write_u8(addr->addr[0], 16);
+    debug_write_u8(addr->addr[i], 16);
   }
 }
 

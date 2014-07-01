@@ -9,6 +9,8 @@
 #define MIN(a,b) ( ((a) < (b)) ? (a) : (b) )
 #endif
 
+#define ENC28J60_DEBUG
+
 void _enc28j60_send();
 uint16_t _enc28j60_receivePacket(uint8_t* buffer, uint16_t bufferLength);
 
@@ -33,12 +35,28 @@ void enc28j60_setup(struct uip_eth_addr* macAddress) {
   timer_set(&_enc28j60_periodicTimer, CLOCK_SECOND / 4);
 
   // perform system reset
+  enc28j60_reset_assert();
+  delay_ms(50);
+  enc28j60_reset_deassert();
+  delay_ms(1000);
+
   _enc28j60_writeOp(ENC28J60_SOFT_RESET, 0, ENC28J60_SOFT_RESET);
   delay_ms(50);
 
   // check CLKRDY bit to see if reset is complete
   // The CLKRDY does not work. See Rev. B4 Silicon Errata point. Just wait.
-  // while(!(_enc28j60_readReg(ESTAT) & ESTAT_CLKRDY));
+  while(1) {
+    uint8_t r = _enc28j60_readReg(ESTAT);
+    if(r & ESTAT_CLKRDY) {
+      break;
+    }
+#ifdef ENC28J60_DEBUG
+    debug_write("?ESTAT: 0x");
+    debug_write_u8(r,16);
+    debug_write_line("");
+#endif
+    delay_ms(100);
+  }
 
   // do bank 0 stuff
   // initialize receive buffer
@@ -69,8 +87,6 @@ void enc28j60_setup(struct uip_eth_addr* macAddress) {
   // bring MAC out of reset
   _enc28j60_writeRegPair(MACON2, 0x00);
 
-  enc28j60_debugDump();
-
   // enable automatic padding to 60bytes and CRC operations
   _enc28j60_writeOp(ENC28J60_BIT_FIELD_SET, MACON3, MACON3_PADCFG0 | MACON3_TXCRCEN | MACON3_FRMLNEN);
 
@@ -99,8 +115,6 @@ void enc28j60_setup(struct uip_eth_addr* macAddress) {
   _enc28j60_writeRegPair(EPMM0, 0x303f);
   _enc28j60_writeRegPair(EPMCSL, 0xf7f9);
 
-  enc28j60_debugDump();
-
   // do bank 3 stuff
   // write MAC address
   // NOTE: MAC address in ENC28J60 is byte-backward
@@ -110,8 +124,6 @@ void enc28j60_setup(struct uip_eth_addr* macAddress) {
   _enc28j60_writeReg(MAADR2, macAddress->addr[3]);
   _enc28j60_writeReg(MAADR1, macAddress->addr[4]);
   _enc28j60_writeReg(MAADR0, macAddress->addr[5]);
-
-  enc28j60_debugDump();
 
   // no loopback of transmitted frames
   _enc28j60_phyWrite(PHCON2, PHCON2_HDLDIS);
@@ -128,9 +140,9 @@ void enc28j60_setup(struct uip_eth_addr* macAddress) {
   // Configure leds
   _enc28j60_phyWrite(PHLCON, 0x476);
 
-  delay_ms(100);
-
   enc28j60_debugDump();
+
+  delay_ms(100);
 }
 
 void enc28j60_tick() {
@@ -139,6 +151,7 @@ void enc28j60_tick() {
     struct uip_eth_hdr* header = ((struct uip_eth_hdr *)&uip_buf[0]);
     uint16_t packetType = header->type;
 
+#ifdef ENC28J60_DEBUG
     debug_write("?receivePacket: len: ");
     debug_write_u16(uip_len, 10);
     debug_write(", dest: ");
@@ -148,15 +161,17 @@ void enc28j60_tick() {
     debug_write(", type: ");
     debug_write_u16(packetType, 10);
     debug_write_line("");
-
     for (int i = 0; i < uip_len; i++) {
       debug_write_u8(uip_buf[i],16);
       debug_write(" ");
     }
     debug_write_line("");
+#endif
 
     if (packetType == HTONS(UIP_ETHTYPE_IP)) {
+#ifdef ENC28J60_DEBUG
       debug_write_line("?readPacket type IP");
+#endif
       uip_arp_ipin();
       uip_input();
       if (uip_len > 0) {
@@ -164,7 +179,9 @@ void enc28j60_tick() {
         _enc28j60_send();
       }
     } else if (packetType == HTONS(UIP_ETHTYPE_ARP)) {
+#ifdef ENC28J60_DEBUG
       debug_write_line("?readPacket type ARP");
+#endif
       uip_arp_arpin();
       if (uip_len > 0) {
         _enc28j60_send();
@@ -202,12 +219,12 @@ void enc28j60_tick() {
 }
 
 void enc28j60_debugDump() {
-  debug_write("RevID: 0x");
+  debug_write("?RevID: 0x");
   debug_write_u8(_enc28j60_readReg(EREVID), 16);
   debug_write_line("");
 
-  debug_write_line("Cntrl: ECON1 ECON2 ESTAT  EIR  EIE");
-  debug_write("       ");
+  debug_write_line("?Cntrl: ECON1 ECON2 ESTAT  EIR  EIE");
+  debug_write("?       ");
   debug_write_u8(_enc28j60_readReg(ECON1), 16);
   debug_write("    ");
   debug_write_u8(_enc28j60_readReg(ECON2), 16);
@@ -219,8 +236,8 @@ void enc28j60_debugDump() {
   debug_write_u8(_enc28j60_readReg(EIE), 16);
   debug_write_line("");
 
-  debug_write_line("MAC  : MACON1  MACON2  MACON3  MACON4  MAC-Address");
-  debug_write("       0x");
+  debug_write_line("?MAC  : MACON1  MACON2  MACON3  MACON4  MAC-Address");
+  debug_write("?       0x");
   debug_write_u8(_enc28j60_readReg(MACON1), 16);
   debug_write("    0x");
   debug_write_u8(_enc28j60_readReg(MACON2), 16);
@@ -237,8 +254,8 @@ void enc28j60_debugDump() {
   debug_write_u8(_enc28j60_readReg(MAADR0), 16);
   debug_write_line("");
 
-  debug_write_line("Rx   : ERXST  ERXND  ERXWRPT ERXRDPT ERXFCON EPKTCNT MAMXFL");
-  debug_write("       0x");
+  debug_write_line("?Rx   : ERXST  ERXND  ERXWRPT ERXRDPT ERXFCON EPKTCNT MAMXFL");
+  debug_write("?       0x");
   debug_write_u8(_enc28j60_readReg(ERXSTH), 16);
   debug_write_u8(_enc28j60_readReg(ERXSTL), 16);
   debug_write(" 0x");
@@ -259,8 +276,8 @@ void enc28j60_debugDump() {
   debug_write_u8(_enc28j60_readReg(MAMXFLL), 16);
   debug_write_line("");
 
-  debug_write_line("Tx   : ETXST  ETXND  MACLCON1 MACLCON2 MAPHSUP");
-  debug_write("       0x");
+  debug_write_line("?Tx   : ETXST  ETXND  MACLCON1 MACLCON2 MAPHSUP");
+  debug_write("?       0x");
   debug_write_u8(_enc28j60_readReg(ETXSTH), 16);
   debug_write_u8(_enc28j60_readReg(ETXSTL), 16);
   debug_write(" 0x");
@@ -286,32 +303,36 @@ uint16_t _enc28j60_receivePacket(uint8_t* buffer, uint16_t bufferLength) {
     return 0;
   }
 
-  enc28j60_debugDump();
-
+#ifdef ENC28J60_DEBUG
   debug_write("read from: ");
   debug_write_u16(_enc28j60_nextPacketPtr, 10);
   debug_write_line("");
+#endif
 
   // Set the read pointer to the start of the received packet
   _enc28j60_writeRegPair(ERDPTL, _enc28j60_nextPacketPtr);
 
   // read the next packet pointer
   _enc28j60_nextPacketPtr = _enc28j60_readOp16(ENC28J60_READ_BUF_MEM, 0);
+#ifdef ENC28J60_DEBUG
   debug_write("nextPacketPtr: ");
   debug_write_u16(_enc28j60_nextPacketPtr, 10);
   debug_write_line("");
+#endif
 
   // read the packet length (see datasheet page 43)
   len = _enc28j60_readOp16(ENC28J60_READ_BUF_MEM, 0);
-  //len -= 4; //remove the CRC count
+  len -= 4; //remove the CRC count
 
   len = MIN(len, bufferLength);
 
   // read the receive status (see datasheet page 43)
   rxstat = _enc28j60_readOp16(ENC28J60_READ_BUF_MEM, 0);
+#ifdef ENC28J60_DEBUG
   debug_write("rxstat: ");
   debug_write_u16(rxstat, 10);
   debug_write_line("");
+#endif
 
   _enc28j60_readBuffer(buffer, len);
 
@@ -400,6 +421,27 @@ uint8_t _enc28j60_readReg(uint8_t address) {
 }
 
 void _enc28j60_packetSend(uint8_t* packet1, uint16_t packet1Length, uint8_t* packet2, uint16_t packet2Length) {
+#ifdef ENC28J60_DEBUG
+  int i;
+  debug_write_line("packetSend:");
+  debug_write("  packet1 ");
+  debug_write_u16(packet1Length, 10);
+  debug_write(": ");
+  for(i = 0; i < packet1Length; i++) {
+    debug_write_u8(packet1[i], 16);
+    debug_write(" ");
+  }
+  debug_write_line("");
+  debug_write("  packet2 ");
+  debug_write_u16(packet2Length, 10);
+  debug_write(": ");
+  for(i = 0; i < packet2Length; i++) {
+    debug_write_u8(packet2[i], 16);
+    debug_write(" ");
+  }
+  debug_write_line("");
+#endif
+
   // Errata: Transmit Logic reset
   _enc28j60_writeOp(ENC28J60_BIT_FIELD_SET, ECON1, ECON1_TXRST);
   _enc28j60_writeOp(ENC28J60_BIT_FIELD_CLR, ECON1, ECON1_TXRST);
@@ -440,7 +482,6 @@ uint8_t _enc28j60_readOp(uint8_t op, uint8_t address) {
   }
 
   enc28j60_spi_deassert();
-  delay_us(5);
   return result;
 }
 
@@ -457,7 +498,6 @@ void _enc28j60_writeOp(uint8_t op, uint8_t address, uint8_t data) {
   enc28j60_spi_transfer(op | (address & ADDR_MASK));
   enc28j60_spi_transfer(data);
   enc28j60_spi_deassert();
-  delay_us(5);
 }
 
 void _enc28j60_readBuffer(uint8_t* data, uint16_t len) {
@@ -470,7 +510,6 @@ void _enc28j60_readBuffer(uint8_t* data, uint16_t len) {
   }
 
   enc28j60_spi_deassert();
-  delay_us(5);
 }
 
 void _enc28j60_writeBuffer(uint8_t* data, uint16_t len) {
@@ -483,5 +522,4 @@ void _enc28j60_writeBuffer(uint8_t* data, uint16_t len) {
   }
 
   enc28j60_spi_deassert();
-  delay_us(5);
 }

@@ -42,6 +42,14 @@ void network_tick() {
   enc28j60_tick();
 }
 
+void enc28j60_reset_assert() {
+  GPIO_ResetBits(ENC28J60_RESET_PORT, ENC28J60_RESET_PIN);
+}
+
+void enc28j60_reset_deassert() {
+  GPIO_SetBits(ENC28J60_RESET_PORT, ENC28J60_RESET_PIN);
+}
+
 void enc28j60_spi_assert() {
   GPIO_ResetBits(ENC28J60_CS_PORT, ENC28J60_CS_PIN);
 }
