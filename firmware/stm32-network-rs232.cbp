@@ -54,8 +54,6 @@
 			<Option compilerVar="CC" />
 		</Unit>
 		<Unit filename="network.h" />
-		<Unit filename="openocd.cfg" />
-		<Unit filename="openocd.telnet.cfg" />
 		<Unit filename="platform_config.h" />
 		<Unit filename="ring_buffer.c">
 			<Option compilerVar="CC" />
@@ -120,7 +118,6 @@
 		</Unit>
 		<Unit filename="uip/uiplib.h" />
 		<Unit filename="uip/uipopt.h" />
-		<Unit filename="upload.sh" />
 		<Extensions>
 			<code_completion>
 				<search_path add="uip" />

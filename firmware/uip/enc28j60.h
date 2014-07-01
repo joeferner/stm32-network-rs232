@@ -8,7 +8,8 @@ extern void enc28j60_spi_assert();
 extern void enc28j60_spi_deassert();
 extern uint8_t enc28j60_spi_transfer(uint8_t d);
 
-void enc28j60_setup(uint8_t* macAddress);
+void enc28j60_setup(struct uip_eth_addr* macAddress);
 void enc28j60_tick();
+void enc28j60_debugDump();
 
 #endif // _ENC28J60_H_

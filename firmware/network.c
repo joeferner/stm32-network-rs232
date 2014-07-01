@@ -30,7 +30,7 @@ void network_setup() {
   uip_ipaddr(&netmaskAddr, NETMASK_ADDRESS[0], NETMASK_ADDRESS[1], NETMASK_ADDRESS[2], NETMASK_ADDRESS[3]);
   uip_setnetmask(netmaskAddr);
 
-  enc28j60_setup(MAC_ADDRESS);
+  enc28j60_setup(&uip_ethaddr);
 
   uip_init();
   uip_arp_init();

@@ -69,6 +69,16 @@ void debug_led_set(int v) {
   }
 }
 
+void debug_write_uip_eth_addr(struct uip_eth_addr* addr) {
+  int i;
+  for(i = 0; i < 6; i++) {
+    if(i > 0) {
+      debug_write(":");
+    }
+    debug_write_u8(addr->addr[0], 16);
+  }
+}
+
 void debug_write_line(const char* str) {
   debug_write(str);
   debug_write_ch('\n');

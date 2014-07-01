@@ -27,7 +27,7 @@ ring_buffer_u8 g_usartInputRingBuffer;
 uint8_t IP_ADDRESS[4] = {192, 168, 1, 101};
 uint8_t GATEWAY_ADDRESS[4] = {192, 168, 1, 1};
 uint8_t NETMASK_ADDRESS[4] = {255, 255, 255, 0};
-uint8_t MAC_ADDRESS[6] = {0x00, 0x01, 0x02, 0x03, 0x04, 0x05};
+uint8_t MAC_ADDRESS[6] = {0x11, 0x22, 0x33, 0x44, 0x55, 0x66};
 
 int main(void) {
   setup();
@@ -132,10 +132,10 @@ void spi_setup() {
   spiInitStruct.SPI_Mode = SPI_Mode_Master;
   spiInitStruct.SPI_DataSize = SPI_DataSize_8b;
   spiInitStruct.SPI_NSS = SPI_NSS_Soft;
-  spiInitStruct.SPI_BaudRatePrescaler = SPI_BaudRatePrescaler_64;
+  spiInitStruct.SPI_BaudRatePrescaler = SPI_BaudRatePrescaler_256;
   spiInitStruct.SPI_FirstBit = SPI_FirstBit_MSB;
 
-  // Mode 1 (CPOL = 0, CPHA = 1)
+  // Mode 0 (CPOL = 0, CPHA = 0)
   spiInitStruct.SPI_CPOL = SPI_CPOL_Low;
   spiInitStruct.SPI_CPHA = SPI_CPHA_2Edge;
 
