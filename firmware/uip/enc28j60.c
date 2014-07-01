@@ -9,7 +9,7 @@
 #define MIN(a,b) ( ((a) < (b)) ? (a) : (b) )
 #endif
 
-#define ENC28J60_DEBUG
+//#define ENC28J60_DEBUG
 
 void _enc28j60_send();
 uint16_t _enc28j60_receivePacket(uint8_t* buffer, uint16_t bufferLength);
@@ -471,7 +471,6 @@ uint8_t _enc28j60_readOp(uint8_t op, uint8_t address) {
   uint8_t  result;
 
   enc28j60_spi_assert();
-  delay_us(5);
 
   enc28j60_spi_transfer(op | (address & ADDR_MASK)); // issue read command
   result = enc28j60_spi_transfer(0x00);
@@ -494,7 +493,6 @@ uint16_t _enc28j60_readOp16(uint8_t op, uint8_t address) {
 
 void _enc28j60_writeOp(uint8_t op, uint8_t address, uint8_t data) {
   enc28j60_spi_assert();
-  delay_us(5);
   enc28j60_spi_transfer(op | (address & ADDR_MASK));
   enc28j60_spi_transfer(data);
   enc28j60_spi_deassert();
@@ -502,7 +500,6 @@ void _enc28j60_writeOp(uint8_t op, uint8_t address, uint8_t data) {
 
 void _enc28j60_readBuffer(uint8_t* data, uint16_t len) {
   enc28j60_spi_assert();
-  delay_us(5);
 
   enc28j60_spi_transfer(ENC28J60_READ_BUF_MEM);
   while(len--) {
@@ -514,7 +511,6 @@ void _enc28j60_readBuffer(uint8_t* data, uint16_t len) {
 
 void _enc28j60_writeBuffer(uint8_t* data, uint16_t len) {
   enc28j60_spi_assert();
-  delay_us(5);
 
   enc28j60_spi_transfer(ENC28J60_WRITE_BUF_MEM);
   while(len--) {
