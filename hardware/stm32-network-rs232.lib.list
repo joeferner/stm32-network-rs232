@@ -4,3 +4,11 @@ libs/~GNDPWR.lib
 libs/R.lib
 libs/C.lib
 libs/CP.lib
+libs/STM32-48PIN.lib
+libs/CRYSTAL.lib
+libs/LED.lib
+libs/MECH.lib
+libs/USB.lib
+libs/MOSFET-P.lib
+libs/FTDI-PLUG.lib
+libs/SWD.lib
