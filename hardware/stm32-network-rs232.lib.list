@@ -12,3 +12,4 @@ libs/USB.lib
 libs/MOSFET-P.lib
 libs/FTDI-PLUG.lib
 libs/SWD.lib
+libs/MAX3221.lib
