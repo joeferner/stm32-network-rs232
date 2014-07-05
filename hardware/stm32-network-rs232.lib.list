@@ -17,3 +17,4 @@ libs/ENC28J60.lib
 libs/RS-232-DB-9-DTE.lib
 libs/P10.lib
 libs/BELFUSE-08B0-1X1T-06-F.lib
+libs/INDUCTOR.lib
