@@ -1,5 +1,5 @@
 #MicroXplorer Configuration settings - do not modify
-#Sat Jul 05 14:14:49 EDT 2014
+#Sun Jul 06 15:07:13 EDT 2014
 File.Version=1
 KeepUserPlacement=false
 Mcu.Family=STM32F1
