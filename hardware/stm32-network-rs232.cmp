@@ -1,4 +1,4 @@
-Cmp-Mod V01 Created by Cvpcb (2014-06-20 BZR 4951)-product   date = Mon 07 Jul 2014 08:17:24 PM EDT
+Cmp-Mod V01 Created by Cvpcb (2014-06-20 BZR 4951)-product   date = Tue 08 Jul 2014 11:10:37 AM EDT
 
 BeginCmp
 TimeStamp = /53B5F0B3;
@@ -172,7 +172,14 @@ BeginCmp
 TimeStamp = /53B9986A;
 Reference = C25;
 ValeurCmp = 10uF;
-IdModule  = kicad-lib:CAPC2012X100N;
+IdModule  = kicad-lib:CAPCP2012X100N;
+EndCmp
+
+BeginCmp
+TimeStamp = /53BC0E29;
+Reference = C26;
+ValeurCmp = 10uF;
+IdModule  = kicad-lib:CAPCP2012X100N;
 EndCmp
 
 BeginCmp

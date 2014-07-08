@@ -1,2 +1,3 @@
 *.bak
 *.bck
+stm32-network-rs232-cache.lib
