@@ -1,4 +1,4 @@
-Cmp-Mod V01 Created by Cvpcb (2014-06-20 BZR 4951)-product   date = Sun 06 Jul 2014 02:47:06 PM EDT
+Cmp-Mod V01 Created by Cvpcb (2014-06-20 BZR 4951)-product   date = Mon 07 Jul 2014 08:17:24 PM EDT
 
 BeginCmp
 TimeStamp = /53B5F0B3;
@@ -228,7 +228,7 @@ BeginCmp
 TimeStamp = /53B87C9D;
 Reference = P1;
 ValeurCmp = BELFUSE-08B0-1X1T-06-F;
-IdModule  = ;
+IdModule  = kicad-lib:BEL-FUSE-08B0-1X1T-06-F;
 EndCmp
 
 BeginCmp
@@ -264,6 +264,20 @@ TimeStamp = /53B8374E;
 Reference = P6;
 ValeurCmp = RS-232-DB-9-DTE;
 IdModule  = ;
+EndCmp
+
+BeginCmp
+TimeStamp = /53BA9CCF;
+Reference = P7;
+ValeurCmp = P03;
+IdModule  = kicad-lib:HDRV3W66P254_1X3_762X249X838P;
+EndCmp
+
+BeginCmp
+TimeStamp = /53BA93FC;
+Reference = P8;
+ValeurCmp = P03;
+IdModule  = kicad-lib:HDRV3W66P254_1X3_762X249X838P;
 EndCmp
 
 BeginCmp
@@ -368,7 +382,7 @@ BeginCmp
 TimeStamp = /53B7FEE1;
 Reference = U3;
 ValeurCmp = MAX3221;
-IdModule  = ;
+IdModule  = kicad-lib:SOP65P640X120-16N;
 EndCmp
 
 BeginCmp
