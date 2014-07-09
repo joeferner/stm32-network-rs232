@@ -1,4 +1,4 @@
-Cmp-Mod V01 Created by Cvpcb (2014-06-20 BZR 4951)-product   date = Tue 08 Jul 2014 11:10:37 AM EDT
+Cmp-Mod V01 Created by Cvpcb (2014-06-20 BZR 4951)-product   date = Tue 08 Jul 2014 07:26:06 PM EDT
 
 BeginCmp
 TimeStamp = /53B5F0B3;
@@ -199,8 +199,8 @@ EndCmp
 BeginCmp
 TimeStamp = /53B84AAC;
 Reference = L1;
-ValeurCmp = 10uH;
-IdModule  = ;
+ValeurCmp = >80mA;
+IdModule  = kicad-lib:RESC2012X100N;
 EndCmp
 
 BeginCmp
@@ -270,7 +270,7 @@ BeginCmp
 TimeStamp = /53B8374E;
 Reference = P6;
 ValeurCmp = RS-232-DB-9-DTE;
-IdModule  = ;
+IdModule  = kicad-lib:TECONN-5747840-2;
 EndCmp
 
 BeginCmp
