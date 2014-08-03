@@ -9,6 +9,9 @@
 #include "ring_buffer.h"
 #include "platform_config.h"
 #include "network.h"
+#include "rs232.h"
+
+#define USART_FLAG_ERRORS (USART_FLAG_ORE | USART_FLAG_NE | USART_FLAG_FE | USART_FLAG_PE)
 
 void setup();
 void loop();
@@ -19,10 +22,16 @@ void enc28j60_spi_assert();
 void enc28j60_spi_deassert();
 uint8_t enc28j60_spi_transfer(uint8_t d);
 
-#define MAX_LINE_LENGTH 100
-#define INPUT_BUFFER_SIZE 100
-uint8_t g_usartInputBuffer[INPUT_BUFFER_SIZE];
-ring_buffer_u8 g_usartInputRingBuffer;
+#define MAX_LINE_LENGTH 50
+#define INPUT_BUFFER_SIZE 50
+#define OUTPUT_BUFFER_SIZE 50
+uint8_t g_debugUsartInputBuffer[INPUT_BUFFER_SIZE];
+ring_buffer_u8 g_debugUsartInputRingBuffer;
+uint8_t g_rs232UsartInputBuffer[INPUT_BUFFER_SIZE];
+ring_buffer_u8 g_rs232UsartInputRingBuffer;
+uint8_t g_rs232UsartOutputBuffer[OUTPUT_BUFFER_SIZE];
+ring_buffer_u8 g_rs232UsartOutputRingBuffer;
+char line[MAX_LINE_LENGTH];
 
 uint8_t IP_ADDRESS[4] = {192, 168, 1, 101};
 uint8_t GATEWAY_ADDRESS[4] = {192, 168, 1, 1};
@@ -42,11 +51,15 @@ void setup() {
   // 2 bit for pre-emption priority, 2 bits for subpriority
   NVIC_PriorityGroupConfig(NVIC_PriorityGroup_2);
 
+  ring_buffer_u8_init(&g_debugUsartInputRingBuffer, g_debugUsartInputBuffer, INPUT_BUFFER_SIZE);
+  ring_buffer_u8_init(&g_rs232UsartInputRingBuffer, g_rs232UsartInputBuffer, INPUT_BUFFER_SIZE);
+  ring_buffer_u8_init(&g_rs232UsartOutputRingBuffer, g_rs232UsartOutputBuffer, OUTPUT_BUFFER_SIZE);
+
   debug_setup();
   debug_led_set(1);
   debug_write_line("?BEGIN setup");
 
-  ring_buffer_u8_init(&g_usartInputRingBuffer, g_usartInputBuffer, INPUT_BUFFER_SIZE);
+  rs232_setup();
 
   spi_setup();
   network_setup();
@@ -59,6 +72,11 @@ void setup() {
 
 void loop() {
   network_tick();
+  while(ring_buffer_u8_available(&g_rs232UsartOutputRingBuffer)) {
+    uint8_t b = ring_buffer_u8_read_byte(&g_rs232UsartOutputRingBuffer);
+    debug_write_ch(b);
+    rs232_write(b);
+  }
   //delay_ms(1000);
   //debug_led_set(0);
   //delay_ms(1000);
@@ -78,24 +96,49 @@ void assert_failed(uint8_t* file, uint32_t line) {
 }
 
 void on_usart1_irq() {
-  char line[MAX_LINE_LENGTH];
-
-  if (USART_GetITStatus(DEBUG_USART, USART_IT_RXNE) != RESET) {
+  uint8_t status = DEBUG_USART->SR;
+  while(status & (USART_FLAG_RXNE | USART_FLAG_ERRORS)) {
     uint8_t data[1];
     data[0] = USART_ReceiveData(DEBUG_USART);
 
-    ring_buffer_u8_write(&g_usartInputRingBuffer, data, 1);
-    while (ring_buffer_u8_readline(&g_usartInputRingBuffer, line, MAX_LINE_LENGTH) > 0) {
-      if(strcmp(line, "!CONNECT\n") == 0) {
-        debug_write_line("+OK");
-        debug_write_line("!clear");
-        debug_write_line("!set name,stm32-network-rs232");
-        debug_write_line("!set description,'STM32 Network RS232'");
-      } else {
-        debug_write("?Unknown command: ");
+    if (!(status & USART_FLAG_ERRORS)) {
+      ring_buffer_u8_write(&g_debugUsartInputRingBuffer, data, 1);
+      while (ring_buffer_u8_readline(&g_debugUsartInputRingBuffer, line, MAX_LINE_LENGTH) > 0) {
+        if(strcmp(line, "!CONNECT\n") == 0) {
+          debug_write_line("+OK");
+          debug_write_line("!clear");
+          debug_write_line("!set name,stm32-network-rs232");
+          debug_write_line("!set description,'STM32 Network RS232'");
+        } else if(strncmp(line, "!TX", 3) == 0) {
+          int len = strlen(line);
+          ring_buffer_u8_write(&g_rs232UsartOutputRingBuffer, (const uint8_t*)(line + 3), len - 3);
+          debug_write_line("+OK");
+        } else {
+          debug_write("?Unknown command: ");
+          debug_write_line(line);
+        }
+      }
+    }
+
+    status = DEBUG_USART->SR;
+  }
+}
+
+void on_usart2_irq() {
+  uint8_t status = RS232_USART->SR;
+  while(status & (USART_FLAG_RXNE | USART_FLAG_ERRORS)) {
+    uint8_t data[1];
+    data[0] = USART_ReceiveData(RS232_USART);
+
+    if (!(status & USART_FLAG_ERRORS)) {
+      ring_buffer_u8_write(&g_rs232UsartInputRingBuffer, data, 1);
+      while (ring_buffer_u8_readline(&g_rs232UsartInputRingBuffer, line, MAX_LINE_LENGTH) > 0) {
+        debug_write("+RECV:");
         debug_write_line(line);
       }
     }
+
+    status = RS232_USART->SR;
   }
 }
 

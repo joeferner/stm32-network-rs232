@@ -60,6 +60,7 @@ SET(PROJECT_SOURCES
   delay.c
   time.c
   ring_buffer.c
+  rs232.c
 )
 
 ADD_EXECUTABLE(${CMAKE_PROJECT_NAME}.elf ${PROJECT_SOURCES} ${CMSIS_STARTUP_SOURCE})

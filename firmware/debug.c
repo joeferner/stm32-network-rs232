@@ -22,22 +22,15 @@ void debug_setup() {
   gpioInitStructure.GPIO_Speed = GPIO_Speed_50MHz;
   GPIO_Init(DEBUG_LED_PORT, &gpioInitStructure);
 
+  /* Enable clocks */
+  RCC_APB2PeriphClockCmd(DEBUG_USART_RCC, ENABLE);
+
   /* Enable the USART1 Interrupt */
   nvicInitStructure.NVIC_IRQChannel = DEBUG_USART_IRQ;
   nvicInitStructure.NVIC_IRQChannelPreemptionPriority = 3;
   nvicInitStructure.NVIC_IRQChannelSubPriority = 3;
   nvicInitStructure.NVIC_IRQChannelCmd = ENABLE;
   NVIC_Init(&nvicInitStructure);
-
-  usartInitStructure.USART_BaudRate = DEBUG_USART_BAUD;
-  usartInitStructure.USART_WordLength = USART_WordLength_8b;
-  usartInitStructure.USART_Parity = USART_Parity_No;
-  usartInitStructure.USART_StopBits = USART_StopBits_1;
-  usartInitStructure.USART_HardwareFlowControl = USART_HardwareFlowControl_None;
-  usartInitStructure.USART_Mode = USART_Mode_Rx | USART_Mode_Tx;
-
-  /* Enable clocks */
-  RCC_APB2PeriphClockCmd(DEBUG_USART_RCC, ENABLE);
 
   /* Configure USART Tx as alternate function push-pull */
   gpioInitStructure.GPIO_Mode = GPIO_Mode_AF_PP;
@@ -51,6 +44,12 @@ void debug_setup() {
   GPIO_Init(DEBUG_USART_RX, &gpioInitStructure);
 
   /* USART configuration */
+  usartInitStructure.USART_BaudRate = DEBUG_USART_BAUD;
+  usartInitStructure.USART_WordLength = USART_WordLength_8b;
+  usartInitStructure.USART_Parity = USART_Parity_No;
+  usartInitStructure.USART_StopBits = USART_StopBits_1;
+  usartInitStructure.USART_HardwareFlowControl = USART_HardwareFlowControl_None;
+  usartInitStructure.USART_Mode = USART_Mode_Rx | USART_Mode_Tx;
   USART_Init(DEBUG_USART, &usartInitStructure);
 
   /* Enable USART */
@@ -58,7 +57,6 @@ void debug_setup() {
 
   /* Enable the USART interrupts */
   USART_ITConfig(DEBUG_USART, USART_IT_RXNE, ENABLE);
-  USART_ITConfig(DEBUG_USART, USART_IT_TXE, DISABLE);
 }
 
 void debug_led_set(int v) {

@@ -20,7 +20,6 @@ void debug_write_u16(uint16_t val, uint8_t base);
 void debug_write_u32(uint32_t val, uint8_t base);
 void debug_write_i32(int32_t val, uint8_t base);
 void debug_write_uip_eth_addr(struct uip_eth_addr* addr);
-extern void debug_on_rx(uint8_t* data, uint16_t len);
 
 #ifdef	__cplusplus
 }

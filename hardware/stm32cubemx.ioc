@@ -1,5 +1,5 @@
 #MicroXplorer Configuration settings - do not modify
-#Sun Jul 06 15:07:13 EDT 2014
+#Sat Aug 02 23:15:38 EDT 2014
 File.Version=1
 KeepUserPlacement=false
 Mcu.Family=STM32F1
@@ -51,11 +51,11 @@ PA13.Signal=SYS_JTMS-SWDIO
 PA14.Mode=Serial-Wire
 PA14.Signal=SYS_JTCK-SWCLK
 PA2.GPIOParameters=GPIO_Label
-PA2.GPIO_Label=RS232
+PA2.GPIO_Label=RS232_TX
 PA2.Mode=Asynchronous
 PA2.Signal=USART2_TX
 PA3.GPIOParameters=GPIO_Label
-PA3.GPIO_Label=RS232
+PA3.GPIO_Label=RS232_RX
 PA3.Mode=Asynchronous
 PA3.Signal=USART2_RX
 PA5.Mode=Full-Duplex-Master
