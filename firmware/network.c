@@ -1,11 +1,15 @@
 #include <stm32f10x_gpio.h>
 #include <stm32f10x_rcc.h>
+#include <string.h>
 #include "network.h"
 #include "uip/uip_arp.h"
+#include "uip/uip-conf.h"
 #include "platform_config.h"
 #include "debug.h"
 
 uint8_t _network_uip_headerLength = 0;
+
+static int _nework_handle_connection(struct network_uip_state* state);
 
 void network_setup() {
   debug_write_line("?BEGIN network_setup");
@@ -34,6 +38,8 @@ void network_setup() {
 
   uip_init();
   uip_arp_init();
+
+  uip_listen(HTONS(NETWORK_PORT));
 
   debug_write_line("?END network_setup");
 }
@@ -66,7 +72,27 @@ uint8_t enc28j60_spi_transfer(uint8_t d) {
 }
 
 void uip_appcall() {
+  struct network_uip_state* state = (struct network_uip_state*)&(uip_conn->appstate);
+
+  if(uip_connected()) {
+    PSOCK_INIT(&state->p, state->inputbuffer, sizeof(state->inputbuffer));
+  }
+
+  _nework_handle_connection(state);
 }
 
 void uip_udp_appcall() {
+}
+
+static int _nework_handle_connection(struct network_uip_state* state) {
+  PSOCK_BEGIN(&state->p);
+
+  PSOCK_SEND_STR(&state->p, "Hello. What is your name?\n");
+  PSOCK_READTO(&state->p, '\n');
+  strncpy(state->name, state->inputbuffer, sizeof(state->name));
+  PSOCK_SEND_STR(&state->p, "Hello ");
+  PSOCK_SEND_STR(&state->p, state->name);
+  PSOCK_CLOSE(&state->p);
+
+  PSOCK_END(&state->p);
 }

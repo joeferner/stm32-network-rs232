@@ -52,6 +52,7 @@ SET(PROJECT_SOURCES
   uip/uip_arp.c
   uip/clock-arch.c
   uip/enc28j60.c
+  uip/psock.c
 
   main.c
   network.c

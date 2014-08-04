@@ -140,7 +140,13 @@ typedef unsigned short uip_stats_t;
 // SLIP
 //#define UIP_CONF_LLH_LEN 0
 
-typedef void* uip_tcp_appstate_t;
+#include "psock.h"
+
+typedef struct network_uip_state {
+  struct psock p;
+  char inputbuffer[10];
+  char name[40];
+} uip_tcp_appstate_t;
 
 void uip_appcall(void);
 

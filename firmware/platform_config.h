@@ -36,4 +36,7 @@
 #define RS232_USART_RX         GPIOA
 #define RS232_USART_RX_PIN     GPIO_Pin_3
 
+// port 23 is the traditional telnet port
+#define NETWORK_PORT           23
+
 #endif // PLATFORM_CONFIG_H_INCLUDED
