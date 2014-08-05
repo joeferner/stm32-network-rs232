@@ -2,11 +2,16 @@
 #define	DEBUG_H
 
 #include <stdint.h>
+#include <stm32f10x_dma.h>
 #include "uip/uip_arp.h"
 
 #ifdef	__cplusplus
 extern "C" {
 #endif
+
+#define DEBUG_USART_RX_BUFFER_SIZE 100
+
+uint8_t g_debugUsartRxBuffer[DEBUG_USART_RX_BUFFER_SIZE];
 
 void debug_setup();
 void debug_led_set(int v);

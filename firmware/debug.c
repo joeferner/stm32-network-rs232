@@ -14,7 +14,11 @@ char* uitoa(uint32_t value, char* result, int base);
 void debug_setup() {
   USART_InitTypeDef usartInitStructure;
   GPIO_InitTypeDef gpioInitStructure;
-  NVIC_InitTypeDef nvicInitStructure;
+  DMA_InitTypeDef dmaInitStructure;
+
+  GPIO_StructInit(&gpioInitStructure);
+
+  RCC_AHBPeriphClockCmd(RCC_AHBPeriph_DMA1, ENABLE);
 
   RCC_APB2PeriphClockCmd(DEBUG_LED_RCC, ENABLE);
   gpioInitStructure.GPIO_Pin = DEBUG_LED_PIN;
@@ -22,28 +26,37 @@ void debug_setup() {
   gpioInitStructure.GPIO_Speed = GPIO_Speed_50MHz;
   GPIO_Init(DEBUG_LED_PORT, &gpioInitStructure);
 
-  /* Enable clocks */
   RCC_APB2PeriphClockCmd(DEBUG_USART_RCC, ENABLE);
 
-  /* Enable the USART1 Interrupt */
-  nvicInitStructure.NVIC_IRQChannel = DEBUG_USART_IRQ;
-  nvicInitStructure.NVIC_IRQChannelPreemptionPriority = 3;
-  nvicInitStructure.NVIC_IRQChannelSubPriority = 3;
-  nvicInitStructure.NVIC_IRQChannelCmd = ENABLE;
-  NVIC_Init(&nvicInitStructure);
-
-  /* Configure USART Tx as alternate function push-pull */
+  // Configure USART Tx as alternate function push-pull
   gpioInitStructure.GPIO_Mode = GPIO_Mode_AF_PP;
   gpioInitStructure.GPIO_Pin = DEBUG_USART_TX_PIN;
   gpioInitStructure.GPIO_Speed = GPIO_Speed_50MHz;
   GPIO_Init(DEBUG_USART_TX, &gpioInitStructure);
 
-  /* Configure USART Rx as input floating */
+  // Configure USART Rx as input floating
   gpioInitStructure.GPIO_Mode = GPIO_Mode_IN_FLOATING;
   gpioInitStructure.GPIO_Pin = DEBUG_USART_RX_PIN;
   GPIO_Init(DEBUG_USART_RX, &gpioInitStructure);
 
-  /* USART configuration */
+  // Configure DMA - RX
+  DMA_StructInit(&dmaInitStructure);
+  DMA_DeInit(DEBUG_USART_RX_DMA_CH);
+  dmaInitStructure.DMA_PeripheralBaseAddr = (uint32_t)DEBUG_USART_DR_BASE;
+  dmaInitStructure.DMA_MemoryBaseAddr = (uint32_t)g_debugUsartRxBuffer;
+  dmaInitStructure.DMA_DIR = DMA_DIR_PeripheralSRC;
+  dmaInitStructure.DMA_BufferSize = DEBUG_USART_RX_BUFFER_SIZE;
+  dmaInitStructure.DMA_PeripheralInc = DMA_PeripheralInc_Disable;
+  dmaInitStructure.DMA_MemoryInc = DMA_MemoryInc_Enable;
+  dmaInitStructure.DMA_Mode = DMA_Mode_Circular;
+  dmaInitStructure.DMA_PeripheralDataSize = DMA_PeripheralDataSize_Byte;
+  dmaInitStructure.DMA_MemoryDataSize = DMA_MemoryDataSize_Byte;
+  dmaInitStructure.DMA_Priority = DMA_Priority_Medium;
+  dmaInitStructure.DMA_M2M = DMA_M2M_Disable;
+  DMA_Init(DEBUG_USART_RX_DMA_CH, &dmaInitStructure);
+
+  // USART configuration
+  USART_StructInit(&usartInitStructure);
   usartInitStructure.USART_BaudRate = DEBUG_USART_BAUD;
   usartInitStructure.USART_WordLength = USART_WordLength_8b;
   usartInitStructure.USART_Parity = USART_Parity_No;
@@ -52,11 +65,12 @@ void debug_setup() {
   usartInitStructure.USART_Mode = USART_Mode_Rx | USART_Mode_Tx;
   USART_Init(DEBUG_USART, &usartInitStructure);
 
-  /* Enable USART */
-  USART_Cmd(DEBUG_USART, ENABLE);
+  // Enable DMA
+  USART_DMACmd(DEBUG_USART, USART_DMAReq_Rx, ENABLE);
+  DMA_Cmd(DEBUG_USART_RX_DMA_CH, ENABLE);
 
-  /* Enable the USART interrupts */
-  USART_ITConfig(DEBUG_USART, USART_IT_RXNE, ENABLE);
+  // Enable USART
+  USART_Cmd(DEBUG_USART, ENABLE);
 }
 
 void debug_led_set(int v) {

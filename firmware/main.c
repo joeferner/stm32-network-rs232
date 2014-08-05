@@ -17,6 +17,7 @@ void setup();
 void loop();
 void spi_setup();
 void network_setup();
+void debug_tick();
 
 void enc28j60_spi_assert();
 void enc28j60_spi_deassert();
@@ -25,13 +26,13 @@ uint8_t enc28j60_spi_transfer(uint8_t d);
 #define MAX_LINE_LENGTH 50
 #define INPUT_BUFFER_SIZE 50
 #define OUTPUT_BUFFER_SIZE 50
-uint8_t g_debugUsartInputBuffer[INPUT_BUFFER_SIZE];
-ring_buffer_u8 g_debugUsartInputRingBuffer;
 uint8_t g_rs232UsartInputBuffer[INPUT_BUFFER_SIZE];
 ring_buffer_u8 g_rs232UsartInputRingBuffer;
 uint8_t g_rs232UsartOutputBuffer[OUTPUT_BUFFER_SIZE];
 ring_buffer_u8 g_rs232UsartOutputRingBuffer;
 char line[MAX_LINE_LENGTH];
+
+dma_ring_buffer g_debugUsartDmaInputRingBuffer;
 
 uint8_t IP_ADDRESS[4] = {192, 168, 1, 101};
 uint8_t GATEWAY_ADDRESS[4] = {192, 168, 1, 1};
@@ -51,7 +52,7 @@ void setup() {
   // 2 bit for pre-emption priority, 2 bits for subpriority
   NVIC_PriorityGroupConfig(NVIC_PriorityGroup_2);
 
-  ring_buffer_u8_init(&g_debugUsartInputRingBuffer, g_debugUsartInputBuffer, INPUT_BUFFER_SIZE);
+  dma_ring_buffer_init(&g_debugUsartDmaInputRingBuffer, DEBUG_USART_RX_DMA_CH, g_debugUsartRxBuffer, DEBUG_USART_RX_BUFFER_SIZE);
   ring_buffer_u8_init(&g_rs232UsartInputRingBuffer, g_rs232UsartInputBuffer, INPUT_BUFFER_SIZE);
   ring_buffer_u8_init(&g_rs232UsartOutputRingBuffer, g_rs232UsartOutputBuffer, OUTPUT_BUFFER_SIZE);
 
@@ -72,6 +73,7 @@ void setup() {
 
 void loop() {
   network_tick();
+  debug_tick();
   while(ring_buffer_u8_available(&g_rs232UsartOutputRingBuffer)) {
     uint8_t b = ring_buffer_u8_read_byte(&g_rs232UsartOutputRingBuffer);
     debug_write_ch(b);
@@ -95,32 +97,21 @@ void assert_failed(uint8_t* file, uint32_t line) {
   }
 }
 
-void on_usart1_irq() {
-  uint8_t status = DEBUG_USART->SR;
-  while(status & (USART_FLAG_RXNE | USART_FLAG_ERRORS)) {
-    uint8_t data[1];
-    data[0] = USART_ReceiveData(DEBUG_USART);
-
-    if (!(status & USART_FLAG_ERRORS)) {
-      ring_buffer_u8_write(&g_debugUsartInputRingBuffer, data, 1);
-      while (ring_buffer_u8_readline(&g_debugUsartInputRingBuffer, line, MAX_LINE_LENGTH) > 0) {
-        if(strcmp(line, "!CONNECT\n") == 0) {
-          debug_write_line("+OK");
-          debug_write_line("!clear");
-          debug_write_line("!set name,stm32-network-rs232");
-          debug_write_line("!set description,'STM32 Network RS232'");
-        } else if(strncmp(line, "!TX", 3) == 0) {
-          int len = strlen(line);
-          ring_buffer_u8_write(&g_rs232UsartOutputRingBuffer, (const uint8_t*)(line + 3), len - 3);
-          debug_write_line("+OK");
-        } else {
-          debug_write("?Unknown command: ");
-          debug_write_line(line);
-        }
-      }
+void debug_tick() {
+  while(dma_ring_buffer_readline(&g_debugUsartDmaInputRingBuffer, line, MAX_LINE_LENGTH)) {
+    if(strcmp(line, "!CONNECT\n") == 0) {
+      debug_write_line("+OK");
+      debug_write_line("!clear");
+      debug_write_line("!set name,stm32-network-rs232");
+      debug_write_line("!set description,'STM32 Network RS232'");
+    } else if(strncmp(line, "!TX", 3) == 0) {
+      int len = strlen(line);
+      ring_buffer_u8_write(&g_rs232UsartOutputRingBuffer, (const uint8_t*)(line + 3), len - 3);
+      debug_write_line("+OK");
+    } else {
+      debug_write("?Unknown command: ");
+      debug_write_line(line);
     }
-
-    status = DEBUG_USART->SR;
   }
 }
 

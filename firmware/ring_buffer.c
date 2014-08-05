@@ -98,3 +98,44 @@ uint8_t ring_buffer_u8_peekn(ring_buffer_u8* ring, uint16_t i) {
   return *p;
 }
 
+void dma_ring_buffer_init(
+  dma_ring_buffer* ring,
+  DMA_Channel_TypeDef* ch,
+  uint8_t* buffer,
+  uint16_t bufferSize) {
+  ring->ch = ch;
+  ring->buffer = ring->currentPos = buffer;
+  ring->bufferEnd = ring->buffer + bufferSize;
+}
+
+uint16_t dma_ring_buffer_readline(dma_ring_buffer* ring, char* line, uint16_t size) {
+  uint16_t dataCounter = DMA_GetCurrDataCounter(ring->ch);
+  uint8_t* dataEnd = ring->buffer + dataCounter;
+  uint8_t* p = ring->currentPos;
+  char ch;
+  char* out = line;
+  char* lineEnd = line + size;
+
+  // data counter wrapped so read to the end
+  if(dataEnd < ring->currentPos) {
+    while(p < ring->bufferEnd && out < lineEnd) {
+      ch = *out++ = *p++;
+      if(ch == '\n') {
+        ring->currentPos = p;
+        return out - line;
+      }
+    }
+    p = ring->buffer;
+  }
+
+  // read from p to dataEnd
+  while(p < dataEnd && out < lineEnd) {
+    ch = *out++ = *p++;
+    if(ch == '\n') {
+      ring->currentPos = p;
+      return out - line;
+    }
+  }
+
+  return 0;
+}
