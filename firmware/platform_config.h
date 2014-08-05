@@ -30,13 +30,15 @@
 
 #define RS232_USART             USART2
 #define RS232_USART_BAUD        9600
-#define RS232_USART_IRQ         USART2_IRQn
 #define RS232_USART_RCC1        RCC_APB1Periph_USART2
 #define RS232_USART_RCC2        RCC_APB2Periph_GPIOA | RCC_APB2Periph_AFIO
 #define RS232_USART_TX          GPIOA
 #define RS232_USART_TX_PIN      GPIO_Pin_2
 #define RS232_USART_RX          GPIOA
 #define RS232_USART_RX_PIN      GPIO_Pin_3
+#define RS232_USART_RX_DMA_CH   DMA1_Channel6
+#define RS232_USART_RX_DMA_FLAG DMA1_FLAG_TC6
+#define RS232_USART_DR_BASE     (USART2 + 0x0004)
 
 // port 23 is the traditional telnet port
 #define NETWORK_PORT            23

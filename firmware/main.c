@@ -18,6 +18,7 @@ void loop();
 void spi_setup();
 void network_setup();
 void debug_tick();
+void rs232_tick();
 
 void enc28j60_spi_assert();
 void enc28j60_spi_deassert();
@@ -26,8 +27,6 @@ uint8_t enc28j60_spi_transfer(uint8_t d);
 #define MAX_LINE_LENGTH 50
 #define INPUT_BUFFER_SIZE 50
 #define OUTPUT_BUFFER_SIZE 50
-uint8_t g_rs232UsartInputBuffer[INPUT_BUFFER_SIZE];
-ring_buffer_u8 g_rs232UsartInputRingBuffer;
 uint8_t g_rs232UsartOutputBuffer[OUTPUT_BUFFER_SIZE];
 ring_buffer_u8 g_rs232UsartOutputRingBuffer;
 char line[MAX_LINE_LENGTH];
@@ -53,7 +52,6 @@ void setup() {
   NVIC_PriorityGroupConfig(NVIC_PriorityGroup_2);
 
   dma_ring_buffer_init(&g_debugUsartDmaInputRingBuffer, DEBUG_USART_RX_DMA_CH, g_debugUsartRxBuffer, DEBUG_USART_RX_BUFFER_SIZE);
-  ring_buffer_u8_init(&g_rs232UsartInputRingBuffer, g_rs232UsartInputBuffer, INPUT_BUFFER_SIZE);
   ring_buffer_u8_init(&g_rs232UsartOutputRingBuffer, g_rs232UsartOutputBuffer, OUTPUT_BUFFER_SIZE);
 
   debug_setup();
@@ -74,6 +72,7 @@ void setup() {
 void loop() {
   network_tick();
   debug_tick();
+  rs232_tick();
   while(ring_buffer_u8_available(&g_rs232UsartOutputRingBuffer)) {
     uint8_t b = ring_buffer_u8_read_byte(&g_rs232UsartOutputRingBuffer);
     debug_write_ch(b);
@@ -115,21 +114,10 @@ void debug_tick() {
   }
 }
 
-void on_usart2_irq() {
-  uint8_t status = RS232_USART->SR;
-  while(status & (USART_FLAG_RXNE | USART_FLAG_ERRORS)) {
-    uint8_t data[1];
-    data[0] = USART_ReceiveData(RS232_USART);
-
-    if (!(status & USART_FLAG_ERRORS)) {
-      ring_buffer_u8_write(&g_rs232UsartInputRingBuffer, data, 1);
-      while (ring_buffer_u8_readline(&g_rs232UsartInputRingBuffer, line, MAX_LINE_LENGTH) > 0) {
-        debug_write("+RECV:");
-        debug_write_line(line);
-      }
-    }
-
-    status = RS232_USART->SR;
+void rs232_tick() {
+  while(dma_ring_buffer_readline(&g_rs232UsartDmaInputRingBuffer, line, MAX_LINE_LENGTH)) {
+    debug_write("+RECV:");
+    debug_write_line(line);
   }
 }
 

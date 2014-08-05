@@ -11,7 +11,7 @@ extern "C" {
 
 #define DEBUG_USART_RX_BUFFER_SIZE 100
 
-uint8_t g_debugUsartRxBuffer[DEBUG_USART_RX_BUFFER_SIZE];
+extern uint8_t g_debugUsartRxBuffer[DEBUG_USART_RX_BUFFER_SIZE];
 
 void debug_setup();
 void debug_led_set(int v);

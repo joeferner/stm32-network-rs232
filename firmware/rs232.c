@@ -6,36 +6,52 @@
 #include <stm32f10x_rcc.h>
 #include <misc.h>
 
+uint8_t g_rs232UsartInputBuffer[RS232_INPUT_BUFFER_SIZE];
+dma_ring_buffer g_rs232UsartDmaInputRingBuffer;
+
 void rs232_setup() {
   USART_InitTypeDef usartInitStructure;
   GPIO_InitTypeDef gpioInitStructure;
-  NVIC_InitTypeDef nvicInitStructure;
+  DMA_InitTypeDef dmaInitStructure;
 
   debug_write_line("?BEGIN rs232_setup");
 
-  /* Enable clocks */
+  dma_ring_buffer_init(&g_rs232UsartDmaInputRingBuffer, RS232_USART_RX_DMA_CH, g_rs232UsartInputBuffer, RS232_INPUT_BUFFER_SIZE);
+
+  RCC_AHBPeriphClockCmd(RCC_AHBPeriph_DMA1, ENABLE);
+
+  // Enable clocks
   RCC_APB1PeriphClockCmd(RS232_USART_RCC1, ENABLE);
   RCC_APB2PeriphClockCmd(RS232_USART_RCC2, ENABLE);
 
-  /* Enable the USART2 Interrupt */
-  nvicInitStructure.NVIC_IRQChannel = RS232_USART_IRQ;
-  nvicInitStructure.NVIC_IRQChannelPreemptionPriority = 3;
-  nvicInitStructure.NVIC_IRQChannelSubPriority = 4;
-  nvicInitStructure.NVIC_IRQChannelCmd = ENABLE;
-  NVIC_Init(&nvicInitStructure);
-
-  /* Configure USART Tx as alternate function push-pull */
+  // Configure USART Tx as alternate function push-pull
   gpioInitStructure.GPIO_Mode = GPIO_Mode_AF_PP;
   gpioInitStructure.GPIO_Pin = RS232_USART_TX_PIN;
   gpioInitStructure.GPIO_Speed = GPIO_Speed_50MHz;
   GPIO_Init(RS232_USART_TX, &gpioInitStructure);
 
-  /* Configure USART Rx as input floating */
+  // Configure USART Rx as input floating
   gpioInitStructure.GPIO_Mode = GPIO_Mode_IN_FLOATING;
   gpioInitStructure.GPIO_Pin = RS232_USART_RX_PIN;
   GPIO_Init(RS232_USART_RX, &gpioInitStructure);
 
-  /* USART configuration */
+  // Configure DMA - RX
+  DMA_StructInit(&dmaInitStructure);
+  DMA_DeInit(RS232_USART_RX_DMA_CH);
+  dmaInitStructure.DMA_PeripheralBaseAddr = (uint32_t)RS232_USART_DR_BASE;
+  dmaInitStructure.DMA_MemoryBaseAddr = (uint32_t)g_rs232UsartInputBuffer;
+  dmaInitStructure.DMA_DIR = DMA_DIR_PeripheralSRC;
+  dmaInitStructure.DMA_BufferSize = RS232_INPUT_BUFFER_SIZE;
+  dmaInitStructure.DMA_PeripheralInc = DMA_PeripheralInc_Disable;
+  dmaInitStructure.DMA_MemoryInc = DMA_MemoryInc_Enable;
+  dmaInitStructure.DMA_Mode = DMA_Mode_Circular;
+  dmaInitStructure.DMA_PeripheralDataSize = DMA_PeripheralDataSize_Byte;
+  dmaInitStructure.DMA_MemoryDataSize = DMA_MemoryDataSize_Byte;
+  dmaInitStructure.DMA_Priority = DMA_Priority_Medium;
+  dmaInitStructure.DMA_M2M = DMA_M2M_Disable;
+  DMA_Init(RS232_USART_RX_DMA_CH, &dmaInitStructure);
+
+  // USART configuration
   usartInitStructure.USART_BaudRate = RS232_USART_BAUD;
   usartInitStructure.USART_WordLength = USART_WordLength_8b;
   usartInitStructure.USART_Parity = USART_Parity_No;
@@ -44,11 +60,12 @@ void rs232_setup() {
   usartInitStructure.USART_Mode = USART_Mode_Rx | USART_Mode_Tx;
   USART_Init(RS232_USART, &usartInitStructure);
 
-  /* Enable USART */
-  USART_Cmd(RS232_USART, ENABLE);
+  // Enable DMA
+  USART_DMACmd(RS232_USART, USART_DMAReq_Rx, ENABLE);
+  DMA_Cmd(RS232_USART_RX_DMA_CH, ENABLE);
 
-  /* Enable the USART interrupts */
-  USART_ITConfig(RS232_USART, USART_IT_RXNE, ENABLE);
+  // Enable USART
+  USART_Cmd(RS232_USART, ENABLE);
 
   debug_write_line("?END rs232_setup");
 }
@@ -57,4 +74,3 @@ void rs232_write(uint8_t b) {
   while (USART_GetFlagStatus(RS232_USART, USART_FLAG_TXE) == RESET);
   USART_SendData(RS232_USART, b);
 }
-

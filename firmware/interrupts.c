@@ -3,7 +3,6 @@
 #include "debug.h"
 
 extern void time_SysTick_Handler();
-extern void on_usart2_irq();
 
 static void HardFault_Handler( void ) __attribute__( ( naked ) );
 void prvGetRegistersFromStack(uint32_t* pulFaultStackAddress);
@@ -50,10 +49,6 @@ void PendSV_Handler() {
 
 void SysTick_Handler() {
   time_SysTick_Handler();
-}
-
-void USART2_IRQHandler(void) {
-  on_usart2_irq();
 }
 
 void prvGetRegistersFromStack(uint32_t* pulFaultStackAddress) {
