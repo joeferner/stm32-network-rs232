@@ -9,6 +9,9 @@
 uint8_t g_rs232UsartInputBuffer[RS232_INPUT_BUFFER_SIZE];
 dma_ring_buffer g_rs232UsartDmaInputRingBuffer;
 
+uint8_t _rs232UsartOutputBuffer[RS232_OUTPUT_BUFFER_SIZE];
+ring_buffer_u8 _rs232UsartOutputRingBuffer;
+
 void rs232_setup() {
   USART_InitTypeDef usartInitStructure;
   GPIO_InitTypeDef gpioInitStructure;
@@ -17,6 +20,7 @@ void rs232_setup() {
   debug_write_line("?BEGIN rs232_setup");
 
   dma_ring_buffer_init(&g_rs232UsartDmaInputRingBuffer, RS232_USART_RX_DMA_CH, g_rs232UsartInputBuffer, RS232_INPUT_BUFFER_SIZE);
+  ring_buffer_u8_init(&_rs232UsartOutputRingBuffer, _rs232UsartOutputBuffer, RS232_OUTPUT_BUFFER_SIZE);
 
   RCC_AHBPeriphClockCmd(RCC_AHBPeriph_DMA1, ENABLE);
 
@@ -70,7 +74,21 @@ void rs232_setup() {
   debug_write_line("?END rs232_setup");
 }
 
-void rs232_write(uint8_t b) {
-  while (USART_GetFlagStatus(RS232_USART, USART_FLAG_TXE) == RESET);
-  USART_SendData(RS232_USART, b);
+void rs232_write(const uint8_t* buffer, uint16_t len) {
+  ring_buffer_u8_write(&_rs232UsartOutputRingBuffer, buffer, len);
+}
+
+void rs232_tick() {
+  char line[MAX_LINE_LENGTH];
+  while(dma_ring_buffer_readline(&g_rs232UsartDmaInputRingBuffer, line, MAX_LINE_LENGTH)) {
+    debug_write("+RECV:");
+    debug_write_line(line);
+  }
+
+  if(ring_buffer_u8_available(&_rs232UsartOutputRingBuffer)) {
+    uint8_t b = ring_buffer_u8_read_byte(&_rs232UsartOutputRingBuffer);
+
+    while (USART_GetFlagStatus(RS232_USART, USART_FLAG_TXE) == RESET);
+    USART_SendData(RS232_USART, b);
+  }
 }
