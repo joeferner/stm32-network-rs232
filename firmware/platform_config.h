@@ -15,8 +15,7 @@
 #define DEBUG_USART_RX          GPIOA
 #define DEBUG_USART_RX_PIN      GPIO_Pin_10
 #define DEBUG_USART_RX_DMA_CH   DMA1_Channel5
-#define DEBUG_USART_RX_DMA_FLAG DMA1_FLAG_TC5
-#define DEBUG_USART_DR_BASE     (USART1 + 0x0004)
+#define DEBUG_USART_DR_BASE     ((uint32_t)&USART1->DR)
 
 // SPI1 pins: SCK (GPIOA - pin 5)
 // SPI1 pins: MOSI (GPIOA - pin 7)
@@ -39,8 +38,7 @@
 #define RS232_USART_RX          GPIOA
 #define RS232_USART_RX_PIN      GPIO_Pin_3
 #define RS232_USART_RX_DMA_CH   DMA1_Channel6
-#define RS232_USART_RX_DMA_FLAG DMA1_FLAG_TC6
-#define RS232_USART_DR_BASE     (USART2 + 0x0004)
+#define RS232_USART_DR_BASE     ((uint32_t)&USART2->DR)
 
 // port 23 is the traditional telnet port
 #define NETWORK_PORT            23

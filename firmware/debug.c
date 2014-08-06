@@ -42,9 +42,9 @@ void debug_setup() {
   GPIO_Init(DEBUG_USART_RX, &gpioInitStructure);
 
   // Configure DMA - RX
-  DMA_StructInit(&dmaInitStructure);
   DMA_DeInit(DEBUG_USART_RX_DMA_CH);
-  dmaInitStructure.DMA_PeripheralBaseAddr = (uint32_t)DEBUG_USART_DR_BASE;
+  DMA_StructInit(&dmaInitStructure);
+  dmaInitStructure.DMA_PeripheralBaseAddr = DEBUG_USART_DR_BASE;
   dmaInitStructure.DMA_MemoryBaseAddr = (uint32_t)g_debugUsartRxBuffer;
   dmaInitStructure.DMA_DIR = DMA_DIR_PeripheralSRC;
   dmaInitStructure.DMA_BufferSize = DEBUG_USART_RX_BUFFER_SIZE;
