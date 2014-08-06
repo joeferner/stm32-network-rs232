@@ -23,8 +23,8 @@ SET(EXT_RAM_ORIGIN "0x60000000")
 
 CONFIGURE_FILE(stm32_flash.ld.in ${CMAKE_CURRENT_BINARY_DIR}/stm32_flash.ld)
 
-SET(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -Wall -D${STM32_CHIP_DEF}")
-SET(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wall -D${STM32_CHIP_DEF}")
+SET(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -Wall -D${STM32_CHIP_DEF} -I../ -I../contiki/")
+SET(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wall -D${STM32_CHIP_DEF} -I../ -I../contiki/")
 SET(CMAKE_EXE_LINKER_FLAGS "-T${CMAKE_CURRENT_BINARY_DIR}/stm32_flash.ld ${CMAKE_EXE_LINKER_FLAGS}")
 
 SET(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -DUSE_STDPERIPH_DRIVER")
@@ -48,12 +48,10 @@ SET(PROJECT_SOURCES
   ${STM32_USB_FS_DEVICE_LIB_DIR}/Libraries/STM32F10x_StdPeriph_Driver/src/misc.c
   system_stm32f10x.c
 
-  uip/uip.c
-  uip/timer.c
-  uip/uip_arp.c
-  uip/clock-arch.c
-  uip/enc28j60.c
-  uip/psock.c
+  contiki/net/uip.c
+  contiki/net/uip_arp.c
+  contiki/net/psock.c
+  contiki/sys/timer.c
 
   main.c
   network.c
@@ -63,6 +61,7 @@ SET(PROJECT_SOURCES
   time.c
   ring_buffer.c
   rs232.c
+  enc28j60.c
 )
 
 ADD_EXECUTABLE(${CMAKE_PROJECT_NAME}.elf ${PROJECT_SOURCES} ${CMSIS_STARTUP_SOURCE})

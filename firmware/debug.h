@@ -2,8 +2,8 @@
 #define	DEBUG_H
 
 #include <stdint.h>
+#include "contiki/net/uip_arp.h"
 #include <stm32f10x_dma.h>
-#include "uip/uip_arp.h"
 
 #ifdef	__cplusplus
 extern "C" {

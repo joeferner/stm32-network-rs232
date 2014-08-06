@@ -1,6 +1,5 @@
 #include "platform_config.h"
 #include "debug.h"
-//#include "usb.h"
 #include <stm32f10x_usart.h>
 #include <stm32f10x_gpio.h>
 #include <stm32f10x_rcc.h>
@@ -230,4 +229,8 @@ char* uitoa(uint32_t value, char* result, int base) {
     *ptr1++ = tmp_char;
   }
   return result;
+}
+
+void uip_log(char *msg) {
+  debug_write_line(msg);
 }
