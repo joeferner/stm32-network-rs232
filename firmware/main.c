@@ -25,9 +25,6 @@ uint8_t enc28j60_spi_transfer(uint8_t d);
 
 dma_ring_buffer g_debugUsartDmaInputRingBuffer;
 
-uint8_t IP_ADDRESS[4] = {192, 168, 1, 101};
-uint8_t GATEWAY_ADDRESS[4] = {192, 168, 1, 1};
-uint8_t NETMASK_ADDRESS[4] = {255, 255, 255, 0};
 uint8_t MAC_ADDRESS[6] = {0x11, 0x22, 0x33, 0x44, 0x55, 0x66};
 
 int main(void) {

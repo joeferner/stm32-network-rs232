@@ -3,7 +3,7 @@
 #include <string.h>
 #include "network.h"
 #include "contiki/net/uip_arp.h"
-#include "contiki/net/psock.h"
+#include "contiki/net/dhcpc.h"
 #include "contiki-conf.h"
 #include "platform_config.h"
 #include "debug.h"
@@ -24,19 +24,20 @@ void network_setup() {
   uip_lladdr.addr[4] = MAC_ADDRESS[4];
   uip_lladdr.addr[5] = MAC_ADDRESS[5];
 
-  uip_ipaddr(&ipaddr, IP_ADDRESS[0], IP_ADDRESS[1], IP_ADDRESS[2], IP_ADDRESS[3]);
+  uip_ipaddr(&ipaddr, 0, 0, 0, 0);
   uip_sethostaddr(&ipaddr);
 
-  uip_ipaddr(&gatewayAddr, GATEWAY_ADDRESS[0], GATEWAY_ADDRESS[1], GATEWAY_ADDRESS[2], GATEWAY_ADDRESS[3]);
+  uip_ipaddr(&gatewayAddr, 0, 0, 0, 0);
   uip_setdraddr(&gatewayAddr);
 
-  uip_ipaddr(&netmaskAddr, NETMASK_ADDRESS[0], NETMASK_ADDRESS[1], NETMASK_ADDRESS[2], NETMASK_ADDRESS[3]);
+  uip_ipaddr(&netmaskAddr, 0, 0, 0, 0);
   uip_setnetmask(&netmaskAddr);
 
   enc28j60_setup(&uip_lladdr);
 
   uip_init();
   uip_arp_init();
+  dhcpc_init(uip_lladdr.addr, sizeof(uip_lladdr.addr));
 
   uip_listen(UIP_HTONS(NETWORK_PORT));
 
@@ -70,8 +71,12 @@ uint8_t enc28j60_spi_transfer(uint8_t d) {
   return SPI_I2S_ReceiveData(SPI1);
 }
 
-void tcpip_uipcall() {
+void udpip_appcall() {
+  dhcpc_appcall(tcpip_event, NULL);
 }
 
-void udpip_appcall() {
+void dhcpc_configured(const struct dhcpc_state *s) {
+}
+
+void dhcpc_unconfigured(const struct dhcpc_state *s) {
 }

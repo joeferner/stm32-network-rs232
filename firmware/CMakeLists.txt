@@ -51,7 +51,11 @@ SET(PROJECT_SOURCES
   contiki/net/uip.c
   contiki/net/uip_arp.c
   contiki/net/psock.c
+  contiki/net/dhcpc.c
+  contiki/net/tcpip.c
   contiki/sys/timer.c
+  contiki/sys/etimer.c
+  contiki/sys/process.c
 
   main.c
   network.c

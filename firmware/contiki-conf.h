@@ -50,7 +50,12 @@ typedef unsigned int uip_stats_t;
 extern void tcpip_uipcall();
 extern void udpip_appcall();
 
-typedef void* uip_tcp_appstate_t;
-typedef void* uip_udp_appstate_t;
+struct tcpip_uipstate {
+  struct process *p;
+  void *state;
+};
+
+typedef struct tcpip_uipstate uip_tcp_appstate_t;
+typedef struct tcpip_uipstate uip_udp_appstate_t;
 
 #endif // _CONTIKI_CONF_H_
