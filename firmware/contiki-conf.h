@@ -33,7 +33,7 @@ typedef unsigned int uip_stats_t;
 /* uIP configuration */
 #define UIP_CONF_BROADCAST       1
 #define UIP_CONF_LOGGING         1
-#define UIP_CONF_BUFFER_SIZE     116
+#define UIP_CONF_BUFFER_SIZE     1024
 
 #define UIP_CONF_TCP_FORWARD 1
 

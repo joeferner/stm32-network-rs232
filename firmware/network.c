@@ -76,7 +76,12 @@ void udpip_appcall() {
 }
 
 void dhcpc_configured(const struct dhcpc_state *s) {
+  debug_write_line("?dhcpc_configured");
+  debug_write("?ipaddr");
+  debug_write_uip_ip_addr(&s->ipaddr);
+  debug_write_line("");
 }
 
 void dhcpc_unconfigured(const struct dhcpc_state *s) {
+  debug_write_line("?dhcpc_unconfigured");
 }

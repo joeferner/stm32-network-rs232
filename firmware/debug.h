@@ -24,7 +24,8 @@ void debug_write_u8_array(uint8_t *p, int len);
 void debug_write_u16(uint16_t val, uint8_t base);
 void debug_write_u32(uint32_t val, uint8_t base);
 void debug_write_i32(int32_t val, uint8_t base);
-void debug_write_uip_eth_addr(struct uip_eth_addr* addr);
+void debug_write_uip_eth_addr(const struct uip_eth_addr* addr);
+void debug_write_uip_ip_addr(const uip_ipaddr_t* addr);
 
 #ifdef	__cplusplus
 }

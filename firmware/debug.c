@@ -82,7 +82,7 @@ void debug_led_set(int v) {
   }
 }
 
-void debug_write_uip_eth_addr(struct uip_eth_addr* addr) {
+void debug_write_uip_eth_addr(const struct uip_eth_addr* addr) {
   int i;
   for(i = 0; i < 6; i++) {
     if(i > 0) {
@@ -90,6 +90,16 @@ void debug_write_uip_eth_addr(struct uip_eth_addr* addr) {
     }
     debug_write_u8(addr->addr[i], 16);
   }
+}
+
+void debug_write_uip_ip_addr(const uip_ipaddr_t* addr) {
+  debug_write_u8(addr->u8[0], 10);
+  debug_write(".");
+  debug_write_u8(addr->u8[1], 10);
+  debug_write(".");
+  debug_write_u8(addr->u8[2], 10);
+  debug_write(".");
+  debug_write_u8(addr->u8[3], 10);
 }
 
 void debug_write_line(const char* str) {
