@@ -61,6 +61,7 @@ void loop() {
   network_tick();
   debug_tick();
   rs232_tick();
+  process_run();
   //delay_ms(1000);
   //debug_led_set(0);
   //delay_ms(1000);

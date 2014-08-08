@@ -45,10 +45,7 @@ typedef unsigned int uip_stats_t;
 #define RAND_MAX 0x7fff
 
 #define UIP_APPCALL     tcpip_uipcall
-#define UIP_UDP_APPCALL udpip_appcall
-
-extern void tcpip_uipcall();
-extern void udpip_appcall();
+#define UIP_UDP_APPCALL tcpip_uipcall
 
 struct tcpip_uipstate {
   struct process *p;
