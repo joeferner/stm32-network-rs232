@@ -9,6 +9,7 @@
 #include "debug.h"
 
 PROCESS(dhcp_process, "DHCP");
+PROCESS(telnet_process, "Telnet");
 
 uint8_t _network_uip_headerLength = 0;
 uint8_t _network_request_dhcp = 0;
@@ -42,15 +43,13 @@ void network_setup() {
   uip_arp_init();
   _network_request_dhcp = 1;
   process_start(&dhcp_process, NULL);
-
-  uip_listen(UIP_HTONS(NETWORK_PORT));
+  process_start(&telnet_process, NULL);
 
   debug_write_line("?END network_setup");
 }
 
 void network_tick() {
   enc28j60_tick();
-  process_poll(&dhcp_process);
 }
 
 void enc28j60_reset_assert() {
@@ -75,6 +74,30 @@ uint8_t enc28j60_spi_transfer(uint8_t d) {
   while (SPI_I2S_GetFlagStatus(SPI1, SPI_I2S_FLAG_RXNE) == RESET);
   return SPI_I2S_ReceiveData(SPI1);
 }
+
+PROCESS_THREAD(telnet_process, ev, data) {
+  PROCESS_BEGIN();
+  tcp_listen(UIP_HTONS(TELNET_PORT));
+
+  while(1) {
+    PROCESS_WAIT_EVENT();
+    if(ev == PROCESS_EVENT_EXIT) {
+      process_exit(&dhcp_process);
+      LOADER_UNLOAD();
+    } else if(ev == tcpip_event) {
+      if(uip_newdata()) {
+        uint8_t *p = uip_appdata;
+        debug_write_line("data");
+        for(int i=0; i<uip_len; i++) {
+          debug_write_ch(p[i]);
+        }
+      }
+    }
+  }
+
+  PROCESS_END();
+}
+
 
 PROCESS_THREAD(dhcp_process, ev, data) {
   PROCESS_BEGIN();

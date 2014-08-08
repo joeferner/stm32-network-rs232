@@ -41,6 +41,6 @@
 #define RS232_USART_DR_BASE     ((uint32_t)&USART2->DR)
 
 // port 23 is the traditional telnet port
-#define NETWORK_PORT            23
+#define TELNET_PORT             23
 
 #endif // PLATFORM_CONFIG_H_INCLUDED
