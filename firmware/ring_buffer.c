@@ -108,6 +108,34 @@ void dma_ring_buffer_init(
   ring->bufferEnd = ring->buffer + bufferSize;
 }
 
+uint16_t dma_ring_buffer_read(dma_ring_buffer* ring, uint8_t* buffer, uint16_t size) {
+  uint16_t bufferSize = ring->bufferEnd - ring->buffer;
+  uint16_t dataCounter = bufferSize - DMA_GetCurrDataCounter(ring->ch);
+  uint8_t* dataEnd = ring->buffer + dataCounter;
+  uint8_t* p = ring->currentPos;
+  uint8_t ch;
+  uint8_t* out = buffer;
+  uint8_t* bufferEnd = buffer + size;
+
+  // data counter wrapped so read to the end
+  if(dataEnd < ring->currentPos) {
+    while(p < ring->bufferEnd && out < bufferEnd) {
+      ch = *p++;
+      *out++ = ch;
+    }
+    p = ring->buffer;
+  }
+
+  // read from p to dataEnd
+  while(p < dataEnd && out < bufferEnd) {
+    ch = *p++;
+    *out++ = ch;
+  }
+
+  ring->currentPos = p;
+  return out - buffer;
+}
+
 uint16_t dma_ring_buffer_readline(dma_ring_buffer* ring, char* line, uint16_t size) {
   uint16_t bufferSize = ring->bufferEnd - ring->buffer;
   uint16_t dataCounter = bufferSize - DMA_GetCurrDataCounter(ring->ch);

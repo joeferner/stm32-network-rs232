@@ -7,6 +7,8 @@
 #include "contiki-conf.h"
 #include "platform_config.h"
 #include "debug.h"
+#include "rs232.h"
+#include "ring_buffer.h"
 
 PROCESS(dhcp_process, "DHCP");
 PROCESS(telnet_process, "Telnet");
@@ -50,6 +52,7 @@ void network_setup() {
 
 void network_tick() {
   enc28j60_tick();
+  process_poll(&telnet_process);
 }
 
 void enc28j60_reset_assert() {
@@ -76,6 +79,10 @@ uint8_t enc28j60_spi_transfer(uint8_t d) {
 }
 
 PROCESS_THREAD(telnet_process, ev, data) {
+  int i;
+  uint16_t recvLen;
+  uint8_t* p;
+
   PROCESS_BEGIN();
   tcp_listen(UIP_HTONS(TELNET_PORT));
 
@@ -84,13 +91,35 @@ PROCESS_THREAD(telnet_process, ev, data) {
     if(ev == PROCESS_EVENT_EXIT) {
       process_exit(&dhcp_process);
       LOADER_UNLOAD();
+    } else if(ev == PROCESS_EVENT_POLL) {
+      for (i = 0; i < UIP_CONNS; i++) {
+        if(uip_conn_active(i)) {
+          uip_poll_conn(&uip_conns[i]);
+        }
+      }
     } else if(ev == tcpip_event) {
-      if(uip_newdata()) {
-        uint8_t *p = uip_appdata;
-        debug_write_line("data");
-        for(int i=0; i<uip_len; i++) {
+      if(uip_connected()) {
+        tcp_markconn(uip_conn, NULL);
+      } else if(uip_newdata()) {
+        p = uip_appdata;
+        rs232_write(p,uip_len);
+        debug_write("!netdata:");
+        for(i=0; i<uip_len; i++) {
           debug_write_ch(p[i]);
         }
+        debug_write_line("");
+      }
+
+      p = uip_appdata;
+      recvLen = dma_ring_buffer_read(&g_rs232UsartDmaInputRingBuffer, p, 100);
+      if(recvLen > 0) {
+        debug_write("!rs232data:");
+        for(i = 0; i < recvLen; i++) {
+          debug_write_ch(p[i]);
+        }
+        debug_write_line("");
+
+        uip_send(p, recvLen);
       }
     }
   }

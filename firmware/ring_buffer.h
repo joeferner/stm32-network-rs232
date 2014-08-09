@@ -36,6 +36,7 @@ void dma_ring_buffer_init(
   DMA_Channel_TypeDef* ch,
   uint8_t* buffer,
   uint16_t bufferSize);
+uint16_t dma_ring_buffer_read(dma_ring_buffer* ring, uint8_t* buffer, uint16_t size);
 uint16_t dma_ring_buffer_readline(dma_ring_buffer* ring, char* line, uint16_t size);
 
 #endif

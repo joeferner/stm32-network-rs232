@@ -79,12 +79,6 @@ void rs232_write(const uint8_t* buffer, uint16_t len) {
 }
 
 void rs232_tick() {
-  char line[MAX_LINE_LENGTH];
-  while(dma_ring_buffer_readline(&g_rs232UsartDmaInputRingBuffer, line, MAX_LINE_LENGTH)) {
-    debug_write("+RECV:");
-    debug_write_line(line);
-  }
-
   if(ring_buffer_u8_available(&_rs232UsartOutputRingBuffer)) {
     uint8_t b = ring_buffer_u8_read_byte(&_rs232UsartOutputRingBuffer);
 
