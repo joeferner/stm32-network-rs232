@@ -4,6 +4,10 @@
 
 #include <stdint.h>
 #include "enc28j60.h"
+#include "contiki/net/resolv.h"
+
+PROCESS_NAME(dhcp_process);
+PROCESS_NAME(telnet_process);
 
 extern uint8_t IP_ADDRESS[4];
 extern uint8_t GATEWAY_ADDRESS[4];

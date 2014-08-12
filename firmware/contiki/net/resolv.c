@@ -405,6 +405,12 @@ dns_name_isequal(const unsigned char *queryptr, const char *name,
         return 0;
       }
 
+      if(*name == '.' && *queryptr == '\005') {
+        name++;
+        queryptr++;
+        continue;
+      }
+
       if(tolower(*name++) != tolower(*queryptr++)) {
         return 0;
       }
@@ -1092,7 +1098,7 @@ PROCESS_THREAD(mdns_probe_process, ev, data)
   PRINTF("mdns-probe: Process (re)started.\n");
 
   /* Wait extra time if specified in data */
-  if(NULL != data) {
+  if(NULL != data && *(clock_time_t *) data > 0) {
     PRINTF("mdns-probe: Probing will begin in %ld clocks.\n",
            (long)*(clock_time_t *) data);
     etimer_set(&delay, *(clock_time_t *) data);

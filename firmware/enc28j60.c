@@ -5,6 +5,7 @@
 #include "time.h"
 #include "contiki/net/uip_arp.h"
 #include "contiki/sys/timer.h"
+#include "contiki/net/tcpip.h"
 
 #ifndef MIN
 #define MIN(a,b) ( ((a) < (b)) ? (a) : (b) )
@@ -13,6 +14,7 @@
 //#define ENC28J60_DEBUG
 
 void _enc28j60_send();
+uint8_t _enc28j60_tcp_output();
 uint16_t _enc28j60_receivePacket(uint8_t* buffer, uint16_t bufferLength);
 
 void _enc28j60_packetSend(uint8_t* packet1, uint16_t packet1Length, uint8_t* packet2, uint16_t packet2Length);
@@ -112,7 +114,7 @@ void enc28j60_setup(struct uip_eth_addr* macAddress) {
   // in binary these poitions are:11 0000 0011 1111
   // This is hex 303F->EPMM0=0x3f,EPMM1=0x30
   //TODO define specific pattern to receive dhcp-broadcast packages instead of setting ERFCON_BCEN!
-  _enc28j60_writeReg(ERXFCON, ERXFCON_UCEN | ERXFCON_CRCEN | ERXFCON_PMEN | ERXFCON_BCEN);
+  _enc28j60_writeReg(ERXFCON, 0);//ERXFCON_UCEN | ERXFCON_CRCEN | ERXFCON_PMEN | ERXFCON_BCEN);
   _enc28j60_writeRegPair(EPMM0, 0x303f);
   _enc28j60_writeRegPair(EPMCSL, 0xf7f9);
 
@@ -143,7 +145,15 @@ void enc28j60_setup(struct uip_eth_addr* macAddress) {
 
   enc28j60_debugDump();
 
+  tcpip_set_outputfunc(_enc28j60_tcp_output);
+
   delay_ms(100);
+}
+
+uint8_t _enc28j60_tcp_output() {
+  uip_arp_out();
+  _enc28j60_send();
+  return 0;
 }
 
 clock_time_t clock_time(void) {

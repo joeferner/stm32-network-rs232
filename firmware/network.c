@@ -43,8 +43,12 @@ void network_setup() {
 
   uip_init();
   uip_arp_init();
+
+  debug_write_line("?Start DHCP Process");
   _network_request_dhcp = 1;
   process_start(&dhcp_process, NULL);
+
+  debug_write_line("?Start Telnet Process");
   process_start(&telnet_process, NULL);
 
   debug_write_line("?END network_setup");
@@ -163,6 +167,8 @@ void dhcpc_configured(const struct dhcpc_state *s) {
   uip_sethostaddr(&s->ipaddr);
   uip_setdraddr(&s->default_router);
   uip_setnetmask(&s->netmask);
+
+  process_start(&resolv_process, NULL);
 }
 
 void dhcpc_unconfigured(const struct dhcpc_state *s) {

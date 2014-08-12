@@ -27,6 +27,14 @@ dma_ring_buffer g_debugUsartDmaInputRingBuffer;
 
 uint8_t MAC_ADDRESS[6] = {0x11, 0x22, 0x33, 0x44, 0x55, 0x66};
 
+PROCINIT(
+  &etimer_process,
+  &tcpip_process,
+  &dhcp_process,
+  &telnet_process,
+  &resolv_process,
+  &etimer_process);
+
 int main(void) {
   setup();
   while (1) {
@@ -46,6 +54,9 @@ void setup() {
   debug_led_set(1);
   debug_write_line("?BEGIN setup");
 
+  process_init();
+  process_start(&etimer_process, NULL);
+
   rs232_setup();
 
   spi_setup();
@@ -62,6 +73,7 @@ void loop() {
   debug_tick();
   rs232_tick();
   process_run();
+  etimer_request_poll();
   //delay_ms(1000);
   //debug_led_set(0);
   //delay_ms(1000);
@@ -153,3 +165,6 @@ void spi_setup() {
   SPI_Cmd(SPI1, ENABLE);
 }
 
+CCIF unsigned long clock_seconds() {
+  return time_ms() / 1000;
+}
