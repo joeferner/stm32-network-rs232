@@ -1,3 +1,5 @@
 node_modules/
 .idea/
 *.swp
+firmware/.kdev4/
+firmware/stm32-network-rs232.kdev4
