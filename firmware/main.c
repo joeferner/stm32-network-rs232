@@ -25,7 +25,7 @@ uint8_t enc28j60_spi_transfer(uint8_t d);
 
 dma_ring_buffer g_debugUsartDmaInputRingBuffer;
 
-uint8_t MAC_ADDRESS[6] = {0x11, 0x22, 0x33, 0x44, 0x55, 0x66};
+uint8_t MAC_ADDRESS[6] = {0xa4, 0x6f, 0xa7, 0xa5, 0x25, 0xd2};
 
 PROCINIT(
   &etimer_process,

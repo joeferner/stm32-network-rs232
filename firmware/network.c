@@ -154,13 +154,13 @@ PROCESS_THREAD(dhcp_process, ev, data) {
 
 void dhcpc_configured(const struct dhcpc_state *s) {
   debug_write_line("?dhcpc_configured");
-  debug_write("?ipaddr");
+  debug_write("?ipaddr:");
   debug_write_uip_ip_addr(&s->ipaddr);
   debug_write_line("");
-  debug_write("?default_router");
+  debug_write("?default_router:");
   debug_write_uip_ip_addr(&s->default_router);
   debug_write_line("");
-  debug_write("?netmask");
+  debug_write("?netmask:");
   debug_write_uip_ip_addr(&s->netmask);
   debug_write_line("");
 
