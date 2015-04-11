@@ -1,6 +1,6 @@
 #ifndef _VERSION_H_
 #define _VERSION_H_
 
-#define GIT_HASH "44a427227597c877d36fe1c6c75cc0f82aa45ce8"
+#define GIT_HASH "3807b4cf9d3d445e21ec53256cbc5c7044ad67b0"
 
 #endif

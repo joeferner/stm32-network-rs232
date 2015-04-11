@@ -6,11 +6,19 @@
 #include <net/ip/dhcpc.h>
 #include <net/ip/resolv.h>
 #include <stm32lib/device/enc28j60/enc28j60.h>
+#include <stm32lib/contiki/httpd.h>
 
 PROCESS(dhcp_process, "DHCP");
 
 uint8_t _network_request_dhcp = 0;
 ENC28J60 enc28j60;
+
+char httpd_send(process_event_t ev, struct httpd_state *s);
+
+struct httpd_file httpdFiles[] = {
+  { .fileName = "/send", .contentType = mimetype_text_plain, .script = httpd_send },
+  { .fileName = NULL }
+};
 
 void network_setup() {
   printf("?BEGIN network_setup\n");
@@ -49,6 +57,9 @@ void network_setup() {
   printf("?Start DHCP Process\n");
   _network_request_dhcp = 1;
   process_start(&dhcp_process, NULL);
+
+  printf("?Start HTTPD Process\n");
+  process_start(&httpd_process, NULL);
 
   printf("?END network_setup\n");
 }
@@ -98,4 +109,31 @@ void dhcpc_configured(const struct dhcpc_state *s) {
 
 void dhcpc_unconfigured(const struct dhcpc_state *s) {
   printf("?dhcpc_unconfigured\n");
+}
+
+bool httpd_get_file(const char *filename, struct httpd_file *file) {
+  for (uint8_t i = 0; ; i++) {
+    struct httpd_file *f = &httpdFiles[i];
+    if (f->fileName == NULL) {
+      break;
+    }
+    if (strcmp(filename, f->fileName) == 0) {
+      memcpy(file, f, sizeof(struct httpd_file));
+      return true;
+    }
+  }
+  return false;
+}
+
+char httpd_send(process_event_t ev, struct httpd_state *s) {
+  PSOCK_BEGIN(&s->sock);
+
+  if (strncmp((const char *)s->buf, "q=", 2) == 0) {
+    printf("%s\n", s->buf);
+    PSOCK_SEND_STR(&s->sock, http_200_ok);
+  } else {
+    PSOCK_SEND_STR(&s->sock, http_400_fail);
+  }
+
+  PSOCK_END(&s->sock);
 }
