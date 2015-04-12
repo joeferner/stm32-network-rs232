@@ -10,6 +10,7 @@ extern uint8_t MAC_ADDRESS[6];
 #define IWDG_ENABLE
 #define DEBUG_ENABLE_READ
 #define ENC28J60_DEBUG
+#define HTTP_REQUEST_TIMEOUT 20000
 
 #define DEBUG_USART         USART1
 #define DEBUG_BAUD          9600

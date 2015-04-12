@@ -135,15 +135,30 @@ bool httpd_get_file(const char *filename, struct httpd_file *file) {
 
 PT_THREAD(httpd_send(process_event_t ev, struct httpd_state *s)) {
   char result[100];
+  bool timeout;
   PSOCK_BEGIN(&s->sock);
 
   if (strncmp((const char *)s->buf, "q=", 2) == 0) {
     rs232_writeString(urlDecode((char *)(s->buf + 2)));
-    while (rs232_readLine(result, 100) == 0) {
+    while (true) {
+      result[0] = '\0';
+      timeout = false;
+      if (rs232_readLine(result, 100) > 0) {
+        break;
+      }
+      if ((time_ms() - s->startTime) > HTTP_REQUEST_TIMEOUT) {
+        timeout = true;
+        break;
+      }
       PT_YIELD(&s->sock.pt);
     }
-    sprintf((char *)s->buf, "HTTP/1.1 200 OK\r\nConnection: close\r\nContent-Length: %d\r\n\r\n%s", strlen(result), result);
-    PSOCK_SEND_STR(&s->sock, (char *)s->buf);
+    if (timeout) {
+      printf("timeout waiting for response\n");
+      PSOCK_SEND_STR(&s->sock, http_500_internalServerError);
+    } else {
+      sprintf((char *)s->buf, "HTTP/1.1 200 OK\r\nConnection: close\r\nContent-Length: %d\r\n\r\n%s", strlen(result), result);
+      PSOCK_SEND_STR(&s->sock, (char *)s->buf);
+    }
   } else {
     PSOCK_SEND_STR(&s->sock, http_400_fail);
   }
