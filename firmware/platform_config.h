@@ -7,6 +7,8 @@
 
 extern uint8_t MAC_ADDRESS[6];
 
+#define IWDG_ENABLE
+#define DEBUG_ENABLE_READ
 #define ENC28J60_DEBUG
 
 #define DEBUG_USART         USART1
@@ -35,12 +37,12 @@ extern uint8_t MAC_ADDRESS[6];
 #define RS232USART_RX_PIN   GPIO_Pin_3
 
 #include <stm32lib/utils.h>
-#include <stm32lib/hal/rcc.h>
 #include <stm32lib/hal/gpio.h>
 #include <stm32lib/debug.h>
 #include <stm32lib/rcc.h>
 #include <stm32lib/spi.h>
 #include <stm32lib/usart.h>
 #include <stm32lib/time.h>
+#include <stm32lib/iwdg.h>
 
 #endif /* PLATFORM_CONFIG_H_INCLUDED */

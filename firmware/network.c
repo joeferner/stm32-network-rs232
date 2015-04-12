@@ -53,20 +53,27 @@ void network_setup() {
   enc28j60_setup(&enc28j60);
 
   uip_init();
+  IWDG_RESET;
+
   uip_arp_init();
+  IWDG_RESET;
 
   printf("?Start DHCP Process\n");
   _network_request_dhcp = 1;
   process_start(&dhcp_process, NULL);
+  IWDG_RESET;
 
   printf("?Start HTTPD Process\n");
   process_start(&httpd_process, NULL);
+  IWDG_RESET;
 
   printf("?END network_setup\n");
+  IWDG_RESET;
 }
 
 void network_tick() {
   enc28j60_tick(&enc28j60);
+  IWDG_RESET;
 }
 
 uint8_t enc28j60_tcp_output() {

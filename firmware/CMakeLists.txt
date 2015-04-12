@@ -23,6 +23,7 @@ SET(PROJECT_SOURCES
   ${STM32LIB_DIR}/stm32lib/hal/spi.c
   ${STM32LIB_DIR}/stm32lib/hal/usart.c
   ${STM32LIB_DIR}/stm32lib/hal/exti.c
+  ${STM32LIB_DIR}/stm32lib/hal/iwdg.c
   ${STM32LIB_DIR}/stm32lib/usart.c
   ${STM32LIB_DIR}/stm32lib/rcc.c
   ${STM32LIB_DIR}/stm32lib/spi.c
@@ -34,6 +35,7 @@ SET(PROJECT_SOURCES
   ${STM32LIB_DIR}/stm32lib/base64.c
   ${STM32LIB_DIR}/stm32lib/sha1.c
   ${STM32LIB_DIR}/stm32lib/ringbuffer.c
+  ${STM32LIB_DIR}/stm32lib/iwdg.c
   ${STM32LIB_DIR}/stm32lib/device/enc28j60/enc28j60.c
   ${STM32LIB_DIR}/stm32lib/contiki/httpd.c
 

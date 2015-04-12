@@ -37,6 +37,7 @@ void rs232_setup() {
   USART_enable(RS232USART_USART);
 
   printf("?END rs232_setup\n");
+  IWDG_RESET;
 }
 
 void rs232_writeString(const char *str) {
@@ -55,6 +56,8 @@ void rs232_tick() {
     b = USART_rx(RS232USART_USART);
     RingBufferU8_writeByte(&_rs232_readRingBuffer, b);
   }
+
+  IWDG_RESET;
 }
 
 uint16_t rs232_readLine(char *buffer, uint16_t size) {

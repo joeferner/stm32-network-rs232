@@ -32,10 +32,13 @@ int main(void) {
 static void setup() {
   SWJTAG_setup(SWJTAG_State_sw);
   debug_setup();
+  IWDG_setup(13000);
+  IWDG_enable();
   time_setup();
 
   process_init();
   process_start(&etimer_process, NULL);
+  IWDG_RESET;
 
   setup_spi();
   rs232_setup();
@@ -62,13 +65,27 @@ static void setup_spi() {
   SPI_enable(ENC28J60_SPI);
 
   printf("setup spi complete!\n");
+  IWDG_RESET;
 }
 
 static void loop() {
   network_tick();
   rs232_tick();
+  debug_tick();
   process_run();
+  IWDG_RESET;
   etimer_request_poll();
+  IWDG_RESET;
+}
+
+extern void debug_handleCommand(const char *str) {
+  if (!strcmp(str, "testiwdg")) {
+    printf("testing IWDG\n");
+    while (1);
+  } else {
+    printf("unknown debug command: %s\n", str);
+  }
+  IWDG_RESET;
 }
 
 void uip_log(char *msg) {
@@ -88,3 +105,4 @@ void assert_failed(uint8_t *file, uint32_t line) {
     printf("assert_failed: %s:%lu\n", file, line);
   }
 }
+
