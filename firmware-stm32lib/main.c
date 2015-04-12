@@ -5,6 +5,7 @@
 #include <net/ip/tcpip.h>
 #include <net/ip/resolv.h>
 #include "network.h"
+#include "rs232.h"
 
 uint8_t MAC_ADDRESS[6] = {0xa4, 0x6f, 0xa7, 0xa5, 0x25, 0xd2};
 
@@ -37,6 +38,7 @@ static void setup() {
   process_start(&etimer_process, NULL);
 
   setup_spi();
+  rs232_setup();
   network_setup();
   printf("setup complete!\n");
 }
@@ -64,6 +66,7 @@ static void setup_spi() {
 
 static void loop() {
   network_tick();
+  rs232_tick();
   process_run();
   etimer_request_poll();
 }

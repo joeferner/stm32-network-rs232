@@ -33,6 +33,7 @@ SET(PROJECT_SOURCES
   ${STM32LIB_DIR}/stm32lib/newlib.c
   ${STM32LIB_DIR}/stm32lib/base64.c
   ${STM32LIB_DIR}/stm32lib/sha1.c
+  ${STM32LIB_DIR}/stm32lib/ringbuffer.c
   ${STM32LIB_DIR}/stm32lib/device/enc28j60/enc28j60.c
   ${STM32LIB_DIR}/stm32lib/contiki/httpd.c
 
@@ -54,6 +55,7 @@ SET(PROJECT_SOURCES
   main.c
   interrupts.c
   network.c
+  rs232.c
 )
 
 SET(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -DUSE_FULL_ASSERT -D${STM32_CHIP_DEF}")
