@@ -31,6 +31,10 @@ int main(void) {
 
 static void setup() {
   SWJTAG_setup(SWJTAG_State_sw);
+  NVIC_priorityGroupConfig(NVIC_PriorityGroup_2);
+  NVIC_enable(USART_getIrqForPort(RS232USART_USART), 1, 0);
+  NVIC_enable(USART_getIrqForPort(DEBUG_USART), 1, 1);
+
   debug_setup();
   IWDG_setup(13000);
   IWDG_enable();
@@ -70,7 +74,6 @@ static void setup_spi() {
 
 static void loop() {
   network_tick();
-  rs232_tick();
   debug_tick();
   process_run();
   IWDG_RESET;
@@ -105,4 +108,5 @@ void assert_failed(uint8_t *file, uint32_t line) {
     printf("assert_failed: %s:%lu\n", file, line);
   }
 }
+
 

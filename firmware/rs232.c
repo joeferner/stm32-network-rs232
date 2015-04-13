@@ -34,6 +34,10 @@ void rs232_setup() {
   usart.halUsartInitParams.mode = USART_Mode_rx | USART_Mode_tx;
   USART_init(&usart);
 
+  USART_interruptReceive(RS232USART_USART, ENABLE);
+  USART_interruptTransmissionComplete(RS232USART_USART, ENABLE);
+  USART_interruptsEnable(RS232USART_USART);
+
   USART_enable(RS232USART_USART);
 
   printf("?END rs232_setup\n");
@@ -44,20 +48,22 @@ void rs232_writeString(const char *str) {
   RingBufferU8_write(&_rs232_writeRingBuffer, (const uint8_t *)str, strlen(str));
 }
 
-void rs232_tick() {
+void rs232_usartIrq() {
   uint8_t b;
 
-  if (USART_txComplete(RS232USART_USART) && RingBufferU8_available(&_rs232_writeRingBuffer) > 0) {
-    b = RingBufferU8_readByte(&_rs232_writeRingBuffer);
-    USART_tx(RS232USART_USART, b);
+  if (USART_getFlagStatus(RS232USART_USART, USART_Flag_TC)) {
+    USART_clearFlag(RS232USART_USART, USART_Flag_TC);
+    if (RingBufferU8_available(&_rs232_writeRingBuffer) > 0) {
+      b = RingBufferU8_readByte(&_rs232_writeRingBuffer);
+      USART_tx(RS232USART_USART, b);
+    }
   }
 
-  if (USART_rxHasData(RS232USART_USART)) {
+  if (USART_getFlagStatus(RS232USART_USART, USART_Flag_RXNE)) {
+    USART_clearFlag(RS232USART_USART, USART_Flag_RXNE);
     b = USART_rx(RS232USART_USART);
     RingBufferU8_writeByte(&_rs232_readRingBuffer, b);
   }
-
-  IWDG_RESET;
 }
 
 uint16_t rs232_readLine(char *buffer, uint16_t size) {

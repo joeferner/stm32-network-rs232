@@ -9,6 +9,7 @@ extern uint8_t MAC_ADDRESS[6];
 
 #define IWDG_ENABLE
 #define DEBUG_ENABLE_READ
+#define DEBUG_ENABLE_READ_IRQ
 #define ENC28J60_DEBUG
 #define HTTP_REQUEST_TIMEOUT 20000
 
@@ -39,6 +40,7 @@ extern uint8_t MAC_ADDRESS[6];
 
 #include <stm32lib/utils.h>
 #include <stm32lib/hal/gpio.h>
+#include <stm32lib/hal/nvic.h>
 #include <stm32lib/debug.h>
 #include <stm32lib/rcc.h>
 #include <stm32lib/spi.h>
