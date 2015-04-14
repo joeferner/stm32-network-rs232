@@ -139,6 +139,7 @@ PT_THREAD(httpd_send(process_event_t ev, struct httpd_state *s)) {
   PSOCK_BEGIN(&s->sock);
 
   if (strncmp((const char *)s->buf, "q=", 2) == 0) {
+    rs232_clearBuffer();
     rs232_writeString(urlDecode((char *)(s->buf + 2)));
     while (true) {
       result[0] = '\0';

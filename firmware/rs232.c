@@ -1,5 +1,6 @@
 
 #include "platform_config.h"
+#include "rs232.h"
 #include <stm32lib/ringbuffer.h>
 #include <stm32lib/usart.h>
 #include <string.h>
@@ -7,8 +8,6 @@
 #define RS232_WRITE_BUFFER_SIZE 100
 #define RS232_READ_BUFFER_SIZE 100
 
-uint8_t _rs232_writeBuffer[RS232_WRITE_BUFFER_SIZE];
-RingBufferU8 _rs232_writeRingBuffer;
 uint8_t _rs232_readBuffer[RS232_READ_BUFFER_SIZE];
 RingBufferU8 _rs232_readRingBuffer;
 
@@ -17,7 +16,6 @@ void rs232_setup() {
 
   printf("?BEGIN rs232_setup\n");
 
-  RingBufferU8_init(&_rs232_writeRingBuffer, _rs232_writeBuffer, RS232_WRITE_BUFFER_SIZE);
   RingBufferU8_init(&_rs232_readRingBuffer, _rs232_readBuffer, RS232_READ_BUFFER_SIZE);
 
   USART_initParamsInit(&usart);
@@ -35,7 +33,6 @@ void rs232_setup() {
   USART_init(&usart);
 
   USART_interruptReceive(RS232USART_USART, ENABLE);
-  USART_interruptTransmissionComplete(RS232USART_USART, ENABLE);
   USART_interruptsEnable(RS232USART_USART);
 
   USART_enable(RS232USART_USART);
@@ -45,21 +42,13 @@ void rs232_setup() {
 }
 
 void rs232_writeString(const char *str) {
-  RingBufferU8_write(&_rs232_writeRingBuffer, (const uint8_t *)str, strlen(str));
+  USART_txString(RS232USART_USART, str);
 }
 
 void rs232_usartIrq() {
   uint8_t b;
-
-  if (USART_getFlagStatus(RS232USART_USART, USART_Flag_TC)) {
-    USART_clearFlag(RS232USART_USART, USART_Flag_TC);
-    if (RingBufferU8_available(&_rs232_writeRingBuffer) > 0) {
-      b = RingBufferU8_readByte(&_rs232_writeRingBuffer);
-      USART_tx(RS232USART_USART, b);
-    }
-  }
-
-  if (USART_getFlagStatus(RS232USART_USART, USART_Flag_RXNE)) {
+  
+  while (USART_getFlagStatus(RS232USART_USART, USART_Flag_RXNE)) {
     USART_clearFlag(RS232USART_USART, USART_Flag_RXNE);
     b = USART_rx(RS232USART_USART);
     RingBufferU8_writeByte(&_rs232_readRingBuffer, b);
@@ -69,3 +58,8 @@ void rs232_usartIrq() {
 uint16_t rs232_readLine(char *buffer, uint16_t size) {
   return RingBufferU8_readLine(&_rs232_readRingBuffer, buffer, size);
 }
+
+void rs232_clearBuffer() {
+  RingBufferU8_clear(&_rs232_readRingBuffer);
+}
+
