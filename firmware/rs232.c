@@ -42,6 +42,7 @@ void rs232_setup() {
 }
 
 void rs232_writeString(const char *str) {
+  printf("rs232tx: \"%s\"\n", str);
   USART_txString(RS232USART_USART, str);
 }
 
@@ -56,7 +57,11 @@ void rs232_usartIrq() {
 }
 
 uint16_t rs232_readLine(char *buffer, uint16_t size) {
-  return RingBufferU8_readLine(&_rs232_readRingBuffer, buffer, size);
+  uint16_t result;
+  if((result = RingBufferU8_readUntil(&_rs232_readRingBuffer, buffer, size, 0x0d)) > 0){
+    printf("rs232rx: %d: \"%s\"\n", result, buffer);
+  }
+  return result;
 }
 
 void rs232_clearBuffer() {
