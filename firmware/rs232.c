@@ -50,7 +50,6 @@ void rs232_usartIrq() {
   uint8_t b;
   
   while (USART_getFlagStatus(RS232USART_USART, USART_Flag_RXNE)) {
-    USART_clearFlag(RS232USART_USART, USART_Flag_RXNE);
     b = USART_rx(RS232USART_USART);
     RingBufferU8_writeByte(&_rs232_readRingBuffer, b);
   }
