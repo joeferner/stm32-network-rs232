@@ -63,10 +63,6 @@ void network_setup() {
   process_start(&dhcp_process, NULL);
   IWDG_RESET;
 
-  printf("?Start HTTPD Process\n");
-  process_start(&httpd_process, NULL);
-  IWDG_RESET;
-
   printf("?END network_setup\n");
   IWDG_RESET;
 }
@@ -112,7 +108,12 @@ void dhcpc_configured(const struct dhcpc_state *s) {
   uip_setdraddr(&s->default_router);
   uip_setnetmask(&s->netmask);
 
+  printf("?Start RESOLV Process\n");
   process_start(&resolv_process, NULL);
+  
+  printf("?Start HTTPD Process\n");
+  process_start(&httpd_process, NULL);
+  IWDG_RESET;
 }
 
 void dhcpc_unconfigured(const struct dhcpc_state *s) {

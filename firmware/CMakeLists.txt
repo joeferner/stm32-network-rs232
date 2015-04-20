@@ -48,6 +48,7 @@ SET(PROJECT_SOURCES
   ${CONTIKI_DIR}/core/net/ip/resolv.c
   ${CONTIKI_DIR}/core/net/ip/uip-udp-packet.c
   ${CONTIKI_DIR}/core/net/ip/uip-nameserver.c
+  ${CONTIKI_DIR}/core/net/ip/uiplib.c
   ${CONTIKI_DIR}/core/sys/timer.c
   ${CONTIKI_DIR}/core/sys/etimer.c
   ${CONTIKI_DIR}/core/sys/process.c
