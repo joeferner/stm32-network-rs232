@@ -47,7 +47,6 @@ static void setup() {
   setup_spi();
   rs232_setup();
   network_setup();
-  debug_networkSetup();
   printf("setup complete!\n");
 }
 

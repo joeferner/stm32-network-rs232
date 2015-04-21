@@ -99,6 +99,7 @@ PROCESS_THREAD(dhcp_process, ev, data) {
 }
 
 void dhcpc_configured(const struct dhcpc_state *s) {
+  debug_networkSetup();
   printf("?dhcpc_configured\n");
   printf("?ipaddr: %d.%d.%d.%d\n", s->ipaddr.u8[0], s->ipaddr.u8[1], s->ipaddr.u8[2], s->ipaddr.u8[3]);
   printf("?default_router: %d.%d.%d.%d\n", s->default_router.u8[0], s->default_router.u8[1], s->default_router.u8[2], s->default_router.u8[3]);
