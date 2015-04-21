@@ -2,5 +2,4 @@ build/
 .kdev4/
 firmware-stm32lib.kdev4
 stm32-network-rs232.layout
-stm32lib
 version.h
