@@ -10,7 +10,6 @@
 #define RESET_INTERVAL (5 * 60 * 60 * 1000)
 
 uint8_t MAC_ADDRESS[6] = {0xa4, 0x6f, 0xa7, 0xa5, 0x25, 0xd2};
-uint32_t _resetTime;
 
 static void setup();
 static void setup_spi();
@@ -50,7 +49,6 @@ static void setup() {
   setup_spi();
   rs232_setup();
   network_setup();
-  _resetTime = time_ms() + RESET_INTERVAL;
   printf("setup complete!\n");
 }
 
@@ -77,11 +75,6 @@ static void setup_spi() {
 }
 
 static void loop() {
-  if(time_ms() > _resetTime) {
-    printf("reset timeout, reseting\n");
-    NVIC_systemReset();
-  }
-  
   network_tick();
   debug_tick();
   process_run();
