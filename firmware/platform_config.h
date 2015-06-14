@@ -11,9 +11,9 @@ extern uint8_t MAC_ADDRESS[6];
 #define DEBUG_ENABLE_READ
 #define DEBUG_ENABLE_READ_IRQ
 #define ENC28J60_DEBUG
-#define HTTP_REQUEST_TIMEOUT 20000
-#define DEBUG_NETWORK_IP    "192.168.0.167"
-#define DEBUG_NETWORK_PORT  9991
+//#define DEBUG_NETWORK_IP    "192.168.0.167"
+//#define DEBUG_NETWORK_PORT  9991
+#define UDP_PORT            9000
 
 #define DEBUG_USART         USART1
 #define DEBUG_BAUD          9600

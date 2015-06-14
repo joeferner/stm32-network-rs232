@@ -6,20 +6,21 @@
 #include <net/ipv4/uip_arp.h>
 #include <net/ip/dhcpc.h>
 #include <net/ip/resolv.h>
+#include <net/ip/uip-udp-packet.h>
 #include <stm32lib/device/enc28j60/enc28j60.h>
-#include <stm32lib/contiki/httpd.h>
+
+#define UDP_HDR      ((struct uip_udpip_hdr *)&uip_buf[UIP_LLH_LEN])
 
 PROCESS(dhcp_process, "DHCP");
+PROCESS(rs232udp_process, "RS232UDP server process");
 
+static struct uip_udp_conn *_network_rs232udp_server_conn;
+static uip_ipaddr_t _network_rs232udp_last_ip;
+uint16_t _network_rs232udp_last_port;
 uint8_t _network_request_dhcp = 0;
 ENC28J60 enc28j60;
 
-char httpd_send(process_event_t ev, struct httpd_state *s);
-
-struct httpd_file httpdFiles[] = {
-  { .fileName = "/send", .contentType = mimetype_text_plain, .script = httpd_send },
-  { .fileName = NULL }
-};
+void rs232udp_handler();
 
 void network_setup() {
   printf("?BEGIN network_setup\n");
@@ -68,7 +69,15 @@ void network_setup() {
 }
 
 void network_tick() {
+  char buffer[100];
+  uint16_t result;
+  
   enc28j60_tick(&enc28j60);
+  
+  if((result = rs232_readLine(buffer, sizeof(buffer))) > 0) {
+    uip_udp_packet_sendto(_network_rs232udp_server_conn, buffer, result, &_network_rs232udp_last_ip, UIP_HTONS(_network_rs232udp_last_port));
+  }
+  
   IWDG_RESET;
 }
 
@@ -99,7 +108,9 @@ PROCESS_THREAD(dhcp_process, ev, data) {
 }
 
 void dhcpc_configured(const struct dhcpc_state *s) {
+#ifdef DEBUG_NETWORK_ENABLE
   debug_networkSetup();
+#endif
   printf("?dhcpc_configured\n");
   printf("?ipaddr: %d.%d.%d.%d\n", s->ipaddr.u8[0], s->ipaddr.u8[1], s->ipaddr.u8[2], s->ipaddr.u8[3]);
   printf("?default_router: %d.%d.%d.%d\n", s->default_router.u8[0], s->default_router.u8[1], s->default_router.u8[2], s->default_router.u8[3]);
@@ -112,8 +123,8 @@ void dhcpc_configured(const struct dhcpc_state *s) {
   printf("?Start RESOLV Process\n");
   process_start(&resolv_process, NULL);
   
-  printf("?Start HTTPD Process\n");
-  process_start(&httpd_process, NULL);
+  printf("?Start RS232UDP Process\n");
+  process_start(&rs232udp_process, NULL);
   IWDG_RESET;
 }
 
@@ -121,50 +132,28 @@ void dhcpc_unconfigured(const struct dhcpc_state *s) {
   printf("?dhcpc_unconfigured\n");
 }
 
-bool httpd_get_file(const char *filename, struct httpd_file *file) {
-  for (uint8_t i = 0; ; i++) {
-    struct httpd_file *f = &httpdFiles[i];
-    if (f->fileName == NULL) {
-      break;
-    }
-    if (strcmp(filename, f->fileName) == 0) {
-      memcpy(file, f, sizeof(struct httpd_file));
-      return true;
-    }
+PROCESS_THREAD(rs232udp_process, ev, data) {
+  PROCESS_BEGIN();
+
+  _network_rs232udp_server_conn = udp_new(NULL, UIP_HTONS(0), NULL);
+  udp_bind(_network_rs232udp_server_conn, UIP_HTONS(UDP_PORT));
+  
+  while (1) {
+    PROCESS_WAIT_EVENT_UNTIL(ev == tcpip_event);
+    rs232udp_handler();
   }
-  return false;
+
+  PROCESS_END();
 }
 
-PT_THREAD(httpd_send(process_event_t ev, struct httpd_state *s)) {
-  char result[100];
-  bool timeout;
-  PSOCK_BEGIN(&s->sock);
-
-  if (strncmp((const char *)s->buf, "q=", 2) == 0) {
+void rs232udp_handler() {
+  if(uip_newdata()) {
+    uip_ipaddr_copy(&_network_rs232udp_last_ip, &UDP_HDR->srcipaddr);
+    _network_rs232udp_last_port = UIP_HTONS(UDP_HDR->srcport);
+    
+    ((char *)uip_appdata)[uip_datalen()] = 0;
+    printf("rs232udp rx: '%s'\n", (char *)uip_appdata);
     rs232_clearBuffer();
-    rs232_writeString(urlDecode((char *)(s->buf + 2)));
-    while (true) {
-      result[0] = '\0';
-      timeout = false;
-      if (rs232_readLine(result, 100) > 0) {
-        break;
-      }
-      if ((time_ms() - s->startTime) > HTTP_REQUEST_TIMEOUT) {
-        timeout = true;
-        break;
-      }
-      PT_YIELD(&s->sock.pt);
-    }
-    if (timeout) {
-      printf("timeout waiting for response\n");
-      PSOCK_SEND_STR(&s->sock, http_500_internalServerError);
-    } else {
-      sprintf((char *)s->buf, "HTTP/1.1 200 OK\r\nConnection: close\r\nContent-Length: %d\r\n\r\n%s", strlen(result), result);
-      PSOCK_SEND_STR(&s->sock, (char *)s->buf);
-    }
-  } else {
-    PSOCK_SEND_STR(&s->sock, http_400_fail);
+    rs232_writeString(urlDecode((char *)uip_appdata));
   }
-
-  PSOCK_END(&s->sock);
 }

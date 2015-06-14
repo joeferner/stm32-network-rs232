@@ -38,7 +38,6 @@ SET(PROJECT_SOURCES
   ${STM32LIB_DIR}/stm32lib/ringbuffer.c
   ${STM32LIB_DIR}/stm32lib/iwdg.c
   ${STM32LIB_DIR}/stm32lib/device/enc28j60/enc28j60.c
-  ${STM32LIB_DIR}/stm32lib/contiki/httpd.c
 
   ${CONTIKI_DIR}/core/net/ipv4/uip.c
   ${CONTIKI_DIR}/core/net/ipv4/uip_arp.c
