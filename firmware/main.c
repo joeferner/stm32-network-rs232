@@ -59,7 +59,7 @@ static void setup_spi() {
   spiInit.halSpiInitParams.instance = ENC28J60_SPI;
   spiInit.halSpiInitParams.cpol = SPI_CPOL_low;
   spiInit.halSpiInitParams.cpha = SPI_CPHA_1Edge;
-  spiInit.halSpiInitParams.baudRatePrescaler = SPI_BaudRatePrescaler_8;
+  spiInit.halSpiInitParams.baudRatePrescaler = SPI_BaudRatePrescaler_16;
   spiInit.halSpiInitParams.firstBit = SPI_FirstBit_msb;
   spiInit.mosiPort = ENC28J60_MOSI_PORT;
   spiInit.mosiPin = ENC28J60_MOSI_PIN;
