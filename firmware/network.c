@@ -4,20 +4,17 @@
 #include <sys/etimer.h>
 #include <net/ip/uip.h>
 #include <net/ipv4/uip_arp.h>
-#include <net/ip/dhcpc.h>
 #include <net/ip/resolv.h>
 #include <net/ip/uip-udp-packet.h>
 #include <stm32lib/device/enc28j60/enc28j60.h>
 
 #define UDP_HDR      ((struct uip_udpip_hdr *)&uip_buf[UIP_LLH_LEN])
 
-PROCESS(dhcp_process, "DHCP");
 PROCESS(rs232udp_process, "RS232UDP server process");
 
 static struct uip_udp_conn *_network_rs232udp_server_conn;
 static uip_ipaddr_t _network_rs232udp_last_ip;
 uint16_t _network_rs232udp_last_port;
-uint8_t _network_request_dhcp = 0;
 ENC28J60 enc28j60;
 
 void rs232udp_handler();
@@ -36,13 +33,13 @@ void network_setup() {
   uip_lladdr.addr[4] = MAC_ADDRESS[4];
   uip_lladdr.addr[5] = MAC_ADDRESS[5];
 
-  uip_ipaddr(&ipaddr, 0, 0, 0, 0);
+  uip_ipaddr(&ipaddr, 192, 168, 0, 101);
   uip_sethostaddr(&ipaddr);
 
-  uip_ipaddr(&gatewayAddr, 0, 0, 0, 0);
+  uip_ipaddr(&gatewayAddr, 192, 168, 0, 1);
   uip_setdraddr(&gatewayAddr);
 
-  uip_ipaddr(&netmaskAddr, 0, 0, 0, 0);
+  uip_ipaddr(&netmaskAddr, 255, 255, 255, 0);
   uip_setnetmask(&netmaskAddr);
 
   memcpy(enc28j60.macAddress, uip_lladdr.addr, 6);
@@ -59,9 +56,15 @@ void network_setup() {
   uip_arp_init();
   IWDG_RESET;
 
-  printf("?Start DHCP Process\n");
-  _network_request_dhcp = 1;
-  process_start(&dhcp_process, NULL);
+#ifdef DEBUG_NETWORK_ENABLE
+  debug_networkSetup();
+#endif
+
+  printf("?Start RESOLV Process\n");
+  process_start(&resolv_process, NULL);
+  
+  printf("?Start RS232UDP Process\n");
+  process_start(&rs232udp_process, NULL);
   IWDG_RESET;
 
   printf("?END network_setup\n");
@@ -87,50 +90,6 @@ uint8_t enc28j60_tcp_output() {
   return 0;
 }
 
-PROCESS_THREAD(dhcp_process, ev, data) {
-  PROCESS_BEGIN();
-  dhcpc_init(uip_lladdr.addr, sizeof(uip_lladdr.addr));
-
-  while (1) {
-    PROCESS_WAIT_EVENT();
-    if (_network_request_dhcp) {
-      _network_request_dhcp = 0;
-      dhcpc_request();
-    } else if (ev == PROCESS_EVENT_EXIT) {
-      process_exit(&dhcp_process);
-      LOADER_UNLOAD();
-    } else {
-      dhcpc_appcall(ev, data);
-    }
-  }
-
-  PROCESS_END();
-}
-
-void dhcpc_configured(const struct dhcpc_state *s) {
-#ifdef DEBUG_NETWORK_ENABLE
-  debug_networkSetup();
-#endif
-  printf("?dhcpc_configured\n");
-  printf("?ipaddr: %d.%d.%d.%d\n", s->ipaddr.u8[0], s->ipaddr.u8[1], s->ipaddr.u8[2], s->ipaddr.u8[3]);
-  printf("?default_router: %d.%d.%d.%d\n", s->default_router.u8[0], s->default_router.u8[1], s->default_router.u8[2], s->default_router.u8[3]);
-  printf("?netmask: %d.%d.%d.%d\n", s->netmask.u8[0], s->netmask.u8[1], s->netmask.u8[2], s->netmask.u8[3]);
-
-  uip_sethostaddr(&s->ipaddr);
-  uip_setdraddr(&s->default_router);
-  uip_setnetmask(&s->netmask);
-
-  printf("?Start RESOLV Process\n");
-  process_start(&resolv_process, NULL);
-  
-  printf("?Start RS232UDP Process\n");
-  process_start(&rs232udp_process, NULL);
-  IWDG_RESET;
-}
-
-void dhcpc_unconfigured(const struct dhcpc_state *s) {
-  printf("?dhcpc_unconfigured\n");
-}
 
 PROCESS_THREAD(rs232udp_process, ev, data) {
   PROCESS_BEGIN();

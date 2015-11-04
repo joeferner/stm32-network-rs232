@@ -41,8 +41,8 @@ SET(PROJECT_SOURCES
 
   ${CONTIKI_DIR}/core/net/ipv4/uip.c
   ${CONTIKI_DIR}/core/net/ipv4/uip_arp.c
+  ${CONTIKI_DIR}/core/net/ipv4/uip-fw.c
   ${CONTIKI_DIR}/core/net/ip/psock.c
-  ${CONTIKI_DIR}/core/net/ip/dhcpc.c
   ${CONTIKI_DIR}/core/net/ip/tcpip.c
   ${CONTIKI_DIR}/core/net/ip/resolv.c
   ${CONTIKI_DIR}/core/net/ip/uip-udp-packet.c
