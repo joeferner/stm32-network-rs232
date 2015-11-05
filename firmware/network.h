@@ -5,8 +5,6 @@
 #include "platform_config.h"
 #include <sys/process.h>
 
-PROCESS_NAME(dhcp_process);
-
 void network_setup();
 void network_tick();
 

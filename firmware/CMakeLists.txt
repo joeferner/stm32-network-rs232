@@ -7,6 +7,7 @@ SET(CONTIKI_DIR "./contiki")
 
 INCLUDE_DIRECTORIES(
   ${STM32LIB_DIR}
+  ${CONTIKI_DIR}/dev
   ${CONTIKI_DIR}/core
   ${CONTIKI_DIR}/core/net
   .
@@ -37,11 +38,11 @@ SET(PROJECT_SOURCES
   ${STM32LIB_DIR}/stm32lib/sha1.c
   ${STM32LIB_DIR}/stm32lib/ringbuffer.c
   ${STM32LIB_DIR}/stm32lib/iwdg.c
-  ${STM32LIB_DIR}/stm32lib/device/enc28j60/enc28j60.c
-
+  
   ${CONTIKI_DIR}/core/net/ipv4/uip.c
   ${CONTIKI_DIR}/core/net/ipv4/uip_arp.c
   ${CONTIKI_DIR}/core/net/ipv4/uip-fw.c
+  ${CONTIKI_DIR}/core/net/ipv4/uip-fw-drv.c
   ${CONTIKI_DIR}/core/net/ip/psock.c
   ${CONTIKI_DIR}/core/net/ip/tcpip.c
   ${CONTIKI_DIR}/core/net/ip/resolv.c
@@ -53,6 +54,7 @@ SET(PROJECT_SOURCES
   ${CONTIKI_DIR}/core/sys/process.c
   ${CONTIKI_DIR}/core/sys/procinit.c
   ${CONTIKI_DIR}/core/lib/random.c
+  ${CONTIKI_DIR}/dev/enc28j60/enc28j60.c
   
   system_stm32f10x.c
   main.c

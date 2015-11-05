@@ -4,6 +4,7 @@
 #include <sys/etimer.h>
 #include <net/ip/tcpip.h>
 #include <net/ip/resolv.h>
+#include <net/ipv4/uip-fw-drv.h>
 #include "network.h"
 #include "rs232.h"
 
@@ -18,9 +19,8 @@ static void loop();
 PROCINIT(
   &etimer_process,
   &tcpip_process,
-  &resolv_process,
-
-  &dhcp_process
+  &uip_fw_process,
+  &resolv_process
 );
 
 int main(void) {
