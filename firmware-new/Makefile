@@ -5,7 +5,6 @@ export
 USER_CFLAGS = -DNRF8001_DEBUG
 SRCS = \
 	src/debug.c \
-	src/syscalls.c \
 	src/stm32-network-rs232.c
 SSRCS =
 
