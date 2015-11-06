@@ -368,7 +368,7 @@ do
   name=$$(echo $$name | sed -e 's/^"\(.*\)"$$/\1/')
   label=$$(echo $$label | sed -e 's/^"\(.*\)"$$/\1/')
   if [ "$$label" != '' ] && [ "$$label" != 'Label' ]; then
-    label=$$(echo $${label} | tr a-z A-Z | tr ' ' '_' | tr -cd 'A-Z_')
+    label=$$(echo $${label} | tr a-z A-Z | tr ' ' '_' | tr -cd 'A-Z0-9_')
     echo "#define PIN_$${label}_PORT GPIO$${name:1:1}"
     echo "#define PIN_$${label}_PIN GPIO_PIN_$${name:2}"
   fi
