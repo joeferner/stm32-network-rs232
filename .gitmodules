@@ -7,3 +7,6 @@
 [submodule "firmware-new/libs/contiki"]
 	path = firmware-new/libs/contiki
 	url = git@github.com:contiki-os/contiki.git
+[submodule "firmware-new/libs/utils"]
+	path = firmware-new/libs/utils
+	url = git@github.com:joeferner/stm32-utils.git
