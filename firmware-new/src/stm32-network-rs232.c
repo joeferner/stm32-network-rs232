@@ -4,35 +4,29 @@
 #include <string.h>
 #include "platform_config.h"
 #include "debug.h"
+#include <contiki/core/sys/process.h>
+#include <contiki/core/sys/etimer.h>
 
 void setup() {
   printf("setup\n");
+  process_init();
   debug_setup();
   printf("setup complete\n");
   printf("> ");
 }
 
 void loop() {
-  debug_tick();
+  process_run();
 }
 
-
-#ifdef __GNUC__
-#  define PUTCHAR_PROTOTYPE int __io_putchar(int ch)
-#  define GETCHAR_PROTOTYPE int __io_getchar(void)
-#else
-#  define PUTCHAR_PROTOTYPE int fputc(int ch, FILE *f)
-#  define GETCHAR_PROTOTYPE int fgetc(FILE *f)
-#endif /* __GNUC__ */
-
-PUTCHAR_PROTOTYPE {
-  HAL_UART_Transmit(&DEBUG_UART, (uint8_t *)&ch, 1, MAX_TIMEOUT);
-  return ch;
+void HAL_SYSTICK_Callback() {
+  etimer_request_poll();
 }
 
-GETCHAR_PROTOTYPE {
-  char ch;
-  HAL_UART_Receive(&DEBUG_UART, (uint8_t *)&ch, 1, MAX_TIMEOUT);
-  return ch;
+CCIF unsigned long clock_seconds() {
+  return HAL_GetTick() / 1000;
 }
 
+clock_time_t clock_time(void) {
+  return HAL_GetTick();
+}

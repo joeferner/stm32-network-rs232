@@ -2,10 +2,15 @@ export
 
 -include user.mk
 
-USER_CFLAGS = -DNRF8001_DEBUG
+USER_CFLAGS = -Ilibs/contiki/core
 SRCS = \
 	src/debug.c \
-	src/stm32-network-rs232.c
+	src/stm32-network-rs232.c \
+	src/rs232.c \
+	src/interrupts.c \
+	libs/contiki/core/sys/process.c \
+	libs/contiki/core/sys/etimer.c \
+	libs/contiki/core/sys/timer.c
 SSRCS =
 
 STM32CUBEMX_FILE ?= $(shell ls *.ioc)
@@ -309,7 +314,7 @@ endef
 
 #***********************************************************************
 
-define MINICOM_CONTENTS
+define PICOCOM_CONTENTS
 #!/bin/bash -e
 
 TTY_DEV_PATH=/dev/serial/by-path/
@@ -324,7 +329,7 @@ function getTTYInfo() {
 }
 
 
-baud=$$(cat $(BUILD_DIR)/Src/main.c | grep 'BaudRate ' | sed 's/.*BaudRate = //' | sed 's/;//')
+baud=$$(cat $(BUILD_DIR)/Src/main.c | grep 'BaudRate ' | sed 's/.*BaudRate = //' | sed 's/;//' | head -1)
 ttys=($$(ls -1 $${TTY_DEV_PATH}))
 
 if [ $${#ttys[@]} -eq 1 ]; then
@@ -343,7 +348,8 @@ fi
 getTTYInfo $${tty}
 
 echo "Connecting to $$devName \"$$idSerial\" \"$$idModel\" at baud $$baud"
-minicom -c on -D $$devName -b $$baud
+echo "picocom -b $$baud -f n -d 8 -y n -p 1 --echo --imap lfcrlf $$devName"
+picocom -b $$baud -f n -d 8 -y n -p 1 --echo --imap lfcrlf $$devName
 endef
 
 #***********************************************************************
@@ -408,7 +414,7 @@ endef
 
 #***********************************************************************
 
-.PHONY: st-util gdb minicom clean erase help
+.PHONY: st-util gdb picocom clean erase help
 
 all: $(BIN)
 
@@ -416,7 +422,7 @@ help:
 	@echo "st-util   Start st-util"
 	@echo "erase     Erase the device"
 	@echo "gdb       Start gdb"
-	@echo "minicom   Start minicom"
+	@echo "picocom   Start picocom"
 
 st-util:
 	@echo "Use lsusb then STLINK_DEVICE=<bus>:<device id> for multiple devices"
@@ -429,8 +435,8 @@ erase:
 gdb:
 	$(GDB) -tui -ex "target extended-remote localhost:4242" $(BUILD_DIR)/main.out
 
-minicom: $(BUILD_DIR)/minicom.sh
-	@$(BUILD_DIR)/minicom.sh
+picocom: $(BUILD_DIR)/picocom.sh
+	@$(BUILD_DIR)/picocom.sh
 	
 $(BIN): $(BUILD_DIR)/stm32cubemxgen $(BUILD_DIR)/main.out $(BUILD_DIR)/printsize.sh
 	$(OBJCOPY) $(OBJCOPYFLAGS) $(BUILD_DIR)/main.out $(BIN)
@@ -486,10 +492,10 @@ $(BUILD_DIR)/printsize.sh:
 	@echo "$$PRINTSIZE_CONTENTS" > $(BUILD_DIR)/printsize.sh
 	@chmod a+x $(BUILD_DIR)/printsize.sh
 	
-$(BUILD_DIR)/minicom.sh:
+$(BUILD_DIR)/picocom.sh:
 	@mkdir -p $(BUILD_DIR)
-	@echo "$$MINICOM_CONTENTS" > $(BUILD_DIR)/minicom.sh
-	@chmod a+x $(BUILD_DIR)/minicom.sh
+	@echo "$$PICOCOM_CONTENTS" > $(BUILD_DIR)/picocom.sh
+	@chmod a+x $(BUILD_DIR)/picocom.sh
 
 $(BUILD_DIR)/stm32cubemxgen $(BUILD_DIR)/stm32cubemx-pinout.csv: $(STM32CUBEMX_FILE)
 	@mkdir -p $(BUILD_DIR)
