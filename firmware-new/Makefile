@@ -1,17 +1,7 @@
 export
 
 -include user.mk
-
-USER_CFLAGS = -Ilibs/contiki/core
-SRCS = \
-	src/debug.c \
-	src/stm32-network-rs232.c \
-	src/rs232.c \
-	src/interrupts.c \
-	libs/contiki/core/sys/process.c \
-	libs/contiki/core/sys/etimer.c \
-	libs/contiki/core/sys/timer.c
-SSRCS =
+include project.mk
 
 STM32CUBEMX_FILE ?= $(shell ls *.ioc)
 DEVICE           ?= $(shell cat $(STM32CUBEMX_FILE) | grep PCC.PartNumber | awk -F= '{ print $$2 }')

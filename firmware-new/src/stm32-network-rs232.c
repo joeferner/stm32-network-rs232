@@ -3,7 +3,7 @@
 #include <stdio.h>
 #include <string.h>
 #include "platform_config.h"
-#include "debug.h"
+#include <utils/debug.h>
 #include <contiki/core/sys/process.h>
 #include <contiki/core/sys/etimer.h>
 
@@ -17,6 +17,14 @@ void setup() {
 
 void loop() {
   process_run();
+}
+
+void debug_processLine(const char* line) {
+  if (strlen(line) == 0) {
+  } else {
+    printf("invalid debug command: %s\n", line);
+  }
+  printf("> ");
 }
 
 void HAL_SYSTICK_Callback() {
