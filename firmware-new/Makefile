@@ -74,6 +74,10 @@ ifneq (,$(findstring USART,$(FEATURES)))
 	SRCS += $(BUILD_DIR)/Drivers/$(DEVICE_FAMILY)_HAL_Driver/Src/$(DEVICE_FAMILYL)_hal_uart.c
 endif
 
+ifneq (,$(findstring IWDG,$(FEATURES)))
+	SRCS += $(BUILD_DIR)/Drivers/$(DEVICE_FAMILY)_HAL_Driver/Src/$(DEVICE_FAMILYL)_hal_iwdg.c
+endif
+
 # Variables for version.h
 GIT_HASH := $(shell git rev-parse HEAD)
 GIT_TAG  := $(shell git describe --abbrev=0 --tags)

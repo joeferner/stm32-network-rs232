@@ -16,5 +16,6 @@ extern uint8_t MAC_ADDRESS[6];
 extern UART_HandleTypeDef huart1;
 extern UART_HandleTypeDef huart2;
 extern SPI_HandleTypeDef hspi1;
+extern IWDG_HandleTypeDef hiwdg;
 
 #endif

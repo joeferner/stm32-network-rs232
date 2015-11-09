@@ -77,6 +77,8 @@ PROCESS_THREAD(network_process, ev, data) {
     PROCESS_PAUSE();
     uip_len = enc28j60_read(uip_buf, UIP_BUFSIZE);
     if (uip_len > 0) {
+      HAL_IWDG_Refresh(&hiwdg);
+      
       struct uip_eth_hdr *header = ((struct uip_eth_hdr *)&uip_buf[0]);
       uint16_t packetType = header->type;
 

@@ -14,6 +14,8 @@ uint8_t MAC_ADDRESS[6] = {0xa4, 0x6f, 0xa7, 0xa5, 0x25, 0xd2};
 
 void setup() {
   printf("setup\n");
+  
+  HAL_IWDG_Start(&hiwdg);
 
   process_init();
   process_start(&etimer_process, NULL);
@@ -39,6 +41,9 @@ void debug_processLine(const char* line) {
   } else if(strncmp(line, "tx", 2) == 0) {
     strcat((char*)line, "\r\n");
     rs232_tx(line + 3);
+  } else if(strcmp(line, "testiwdg") == 0) {
+    printf("testing IWDG\n");
+    while(1);
   } else {
     printf("invalid debug command: %s\n", line);
   }
