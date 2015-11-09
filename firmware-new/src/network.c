@@ -5,6 +5,8 @@
 #include <contiki/core/net/ipv4/uip_arp.h>
 #include <contiki/dev/enc28j60/enc28j60.h>
 #include <contiki/core/net/ip/uip.h>
+#include <contiki/core/net/ip/uip-udp-packet.h>
+#include <utils/time.h>
 #include "platform_config.h"
 #include "rs232.h"
 
@@ -16,6 +18,8 @@ PROCESS(rs232udp_process, "RS232UDP server");
 static struct uip_udp_conn *_network_rs232udp_server_conn;
 static uip_ipaddr_t _network_rs232udp_last_ip;
 uint16_t _network_rs232udp_last_port;
+
+uint8_t enc28j60_tcp_output();
 
 void network_setup() {
   printf("network_setup\n");
@@ -40,6 +44,7 @@ void network_setup() {
   uip_ipaddr(&netmaskAddr, 255, 255, 255, 0);
   uip_setnetmask(&netmaskAddr);
 
+  tcpip_set_outputfunc(enc28j60_tcp_output);
   enc28j60_init(uip_lladdr.addr);
   
   uip_init();
@@ -53,6 +58,16 @@ void network_setup() {
   process_start(&network_process, NULL);
 
   printf("END network_setup\n");
+}
+
+uint8_t enc28j60_tcp_output() {
+  uip_arp_out();
+  enc28j60_send(uip_buf, uip_len + sizeof(struct uip_eth_hdr));
+  return 0;
+}
+
+void network_txLastAddr(const char* str) {
+  uip_udp_packet_sendto(_network_rs232udp_server_conn, str, strlen(str), &_network_rs232udp_last_ip, UIP_HTONS(_network_rs232udp_last_port));
 }
 
 PROCESS_THREAD(network_process, ev, data) {
@@ -116,7 +131,13 @@ PROCESS_THREAD(rs232udp_process, ev, data) {
       _network_rs232udp_last_port = UIP_HTONS(UDP_HDR->srcport);
       
       ((char *)uip_appdata)[uip_datalen()] = 0;
-      printf("rs232udp rx: '%s'\n", (char *)uip_appdata);
+      printf("rs232udp %d.%d.%d.%d:%d rx: '%s'\n",
+	     _network_rs232udp_last_ip.u8[0],
+	     _network_rs232udp_last_ip.u8[1],
+	     _network_rs232udp_last_ip.u8[2],
+	     _network_rs232udp_last_ip.u8[3],
+	     _network_rs232udp_last_port,
+	     (char *)uip_appdata);
       rs232_tx((char *)uip_appdata);
     }
   }
@@ -125,7 +146,11 @@ PROCESS_THREAD(rs232udp_process, ev, data) {
 }
 
 void enc28j60_arch_spi_init(void) {
+  enc28j60_arch_spi_deselect();
+  HAL_GPIO_WritePin(PIN_ENC28J60_RESET_PORT, PIN_ENC28J60_RESET_PIN, GPIO_PIN_RESET);
+  sleep_ms(50);
   HAL_GPIO_WritePin(PIN_ENC28J60_RESET_PORT, PIN_ENC28J60_RESET_PIN, GPIO_PIN_SET);
+  sleep_ms(1000);
 }
 
 uint8_t enc28j60_arch_spi_write(uint8_t data) {

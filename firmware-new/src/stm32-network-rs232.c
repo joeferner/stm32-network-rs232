@@ -47,5 +47,6 @@ void debug_processLine(const char* line) {
 
 void rs232_processLine(const char* line) {
   printf("rs232rx: \"%s\"\n", line);
+  network_txLastAddr(line);
 }
 
