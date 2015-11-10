@@ -33,7 +33,7 @@ void loop() {
 }
 
 void uip_log(char *msg) {
-  printf("contiki: %s\n", msg);
+  //printf("contiki: %s\n", msg);
 }
 
 void debug_processLine(const char* line) {
