@@ -1,39 +1,55 @@
 export
 
+FEATURES =
+
 -include user.mk
 include project.mk
 
+MAKEFILE_DIR     ?= $(dir $(realpath $(firstword $(MAKEFILE_LIST))))
 STM32CUBEMX_FILE ?= $(shell ls *.ioc)
 DEVICE           ?= $(shell cat $(STM32CUBEMX_FILE) | grep PCC.PartNumber | awk -F= '{ print $$2 }')
-FEATURES         ?= $(shell cat $(STM32CUBEMX_FILE) | grep Mcu\.IP[0-9]\*= | awk -F= '{ print $$2 }' | sed 's/[0-9]*//g')
+FEATURES         += $(shell cat $(STM32CUBEMX_FILE) | grep Mcu\.IP[0-9]\*= | awk -F= '{ print $$2 }' | sed 's/[0-9]*$$//g')
 
-LINK_FLASH_START  = 0x08000000
-LINK_RAM_START    = 0x20000000
+LINK_FLASH_START       ?= 0x08000000
+LINK_RAM_START         ?= 0x20000000
+LINK_DATA_EEPROM_START ?= 0x08080000
 
-ifeq ($(DEVICE),STM32L051K8Tx)
+ifeq ($(DEVICE),STM32F051K8Tx)
+DEVICE_FAMILY     = STM32F0xx
+DEVICE_TYPE       = STM32F051x8
+CPU               = -mthumb -mcpu=cortex-m0 -mfloat-abi=soft
+RAM               ?= 8192
+FLASH             ?= 65536
+else ifeq ($(DEVICE),STM32L051K8Tx)
 DEVICE_FAMILY     = STM32L0xx
 DEVICE_TYPE       = STM32L051xx
 CPU               = -mthumb -mcpu=cortex-m0 -mfloat-abi=soft
-RAM               = 8192
-FLASH             = 65536
+RAM               ?= 8192
+FLASH             ?= 65536
 else ifeq ($(DEVICE),STM32F072RBTx)
 DEVICE_FAMILY     = STM32F0xx
 DEVICE_TYPE       = STM32F072xB
 CPU               = -mthumb -mcpu=cortex-m0
-RAM               = 16384
-FLASH             = 131072
+RAM               ?= 16384
+FLASH             ?= 131072
+else ifeq ($(DEVICE),STM32F103RBTx)
+DEVICE_FAMILY     = STM32F1xx
+DEVICE_TYPE       = STM32F103xB
+CPU               = -mthumb -mcpu=cortex-m3
+RAM               ?= 20480
+FLASH             ?= 131072
 else ifeq ($(DEVICE),STM32F103RETx)
 DEVICE_FAMILY     = STM32F1xx
 DEVICE_TYPE       = STM32F103xE
 CPU               = -mthumb -mcpu=cortex-m3
-RAM               = 65536
-FLASH             = 524288
+RAM               ?= 65536
+FLASH             ?= 524288
 else ifeq ($(DEVICE),STM32F103CBTx)
 DEVICE_FAMILY     = STM32F1xx
 DEVICE_TYPE       = STM32F103xB
 CPU               = -mthumb -mcpu=cortex-m3
-RAM               = 20480
-FLASH             = 131072
+RAM               ?= 20480
+FLASH             ?= 131072
 else
 $(error Unhandled device $(DEVICE))
 endif
@@ -61,9 +77,8 @@ SSRCS += $(BUILD_DIR)/$(CMSIS_DEVSUP)Source/Templates/gcc/startup_$(STARTUP_FILE
 
 # Add features source files
 ifneq (,$(findstring ADC,$(FEATURES)))
-	SRCS += \
-		$(BUILD_DIR)/Drivers/$(DEVICE_FAMILY)_HAL_Driver/Src/$(DEVICE_FAMILYL)_hal_adc.c \
-		$(BUILD_DIR)/Drivers/$(DEVICE_FAMILY)_HAL_Driver/Src/$(DEVICE_FAMILYL)_hal_adc_ex.c
+	SRCS += $(BUILD_DIR)/Drivers/$(DEVICE_FAMILY)_HAL_Driver/Src/$(DEVICE_FAMILYL)_hal_adc.c
+	SRCS += $(BUILD_DIR)/Drivers/$(DEVICE_FAMILY)_HAL_Driver/Src/$(DEVICE_FAMILYL)_hal_adc_ex.c
 endif
 
 ifneq (,$(findstring SPI,$(FEATURES)))
@@ -78,12 +93,30 @@ ifneq (,$(findstring IWDG,$(FEATURES)))
 	SRCS += $(BUILD_DIR)/Drivers/$(DEVICE_FAMILY)_HAL_Driver/Src/$(DEVICE_FAMILYL)_hal_iwdg.c
 endif
 
+ifneq (,$(findstring TIM,$(FEATURES)))
+	SRCS += $(BUILD_DIR)/Drivers/$(DEVICE_FAMILY)_HAL_Driver/Src/$(DEVICE_FAMILYL)_hal_tim.c
+	SRCS += $(BUILD_DIR)/Drivers/$(DEVICE_FAMILY)_HAL_Driver/Src/$(DEVICE_FAMILYL)_hal_tim_ex.c
+endif
+
+ifneq (,$(findstring I2C,$(FEATURES)))
+	SRCS += $(BUILD_DIR)/Drivers/$(DEVICE_FAMILY)_HAL_Driver/Src/$(DEVICE_FAMILYL)_hal_i2c.c
+endif
+
+ifneq (,$(findstring FLASH,$(FEATURES)))
+	SRCS += $(BUILD_DIR)/Drivers/$(DEVICE_FAMILY)_HAL_Driver/Src/$(DEVICE_FAMILYL)_hal_flash.c
+endif
+
+ifneq (,$(findstring FLASHEX,$(FEATURES)))
+	SRCS += $(BUILD_DIR)/Drivers/$(DEVICE_FAMILY)_HAL_Driver/Src/$(DEVICE_FAMILYL)_hal_flash_ex.c
+endif
+
 # Variables for version.h
 GIT_HASH := $(shell git rev-parse HEAD)
 GIT_TAG  := $(shell git describe --abbrev=0 --tags)
 
 # general variables
-CMSIS_OPT     = -D$(DEVICE_FAMILY) -D$(DEVICE_TYPE) -DUSE_FULL_ASSERT -DUSE_HAL_DRIVER
+USE_FULL_ASSERT ?= -DUSE_FULL_ASSERT
+CMSIS_OPT     = -D$(DEVICE_FAMILY) -D$(DEVICE_TYPE) $(USE_FULL_ASSERT) -DUSE_HAL_DRIVER
 OTHER_OPT     = "-D__weak=__attribute__((weak))" "-D__packed=__attribute__((__packed__))" 
 SYSTEM        = arm-none-eabi
 
@@ -102,7 +135,8 @@ OBJCOPY = $(SYSTEM)-objcopy
 OBJDUMP = $(SYSTEM)-objdump
 GDB     = $(SYSTEM)-gdb
 SIZE    = $(SYSTEM)-size
-STM32CUBEMX = stm32cubemx
+NM      = $(SYSTEM)-nm
+STM32CUBEMX = /opt/STM32CubeMX/STM32CubeMX
 
 INCLUDES =
 CFLAGS   = 
@@ -115,11 +149,12 @@ LIBDIR   = libs
 LIBMKFILES = $(shell find $(LIBDIR) -name \*.mk)
 include $(LIBMKFILES)
 
-INCLUDES  += $(LIBINC) -I$(BUILD_DIR) -I$(LIBDIR)
-CFLAGS    += $(CPU) $(CMSIS_OPT) $(OTHER_OPT) $(USER_CFLAGS) -Wall -fno-common -fno-strict-aliasing $(INCLUDES) -Og -g -gstabs+ -Wfatal-errors
-ASFLAGS   += $(CFLAGS) -x assembler-with-cpp
-LDFLAGS   += -Wl,--gc-sections,-Map=$*.map,-cref -T $(LDSCRIPT) $(CPU)
-ARFLAGS   += cr
+INCLUDES   += $(LIBINC) -I$(BUILD_DIR) -I$(LIBDIR)
+DEBUGFLAGS ?= -Og -g -gstabs+
+CFLAGS     += $(CPU) $(CMSIS_OPT) $(OTHER_OPT) $(USER_CFLAGS) -Wall -fno-common -fdata-sections -ffunction-sections -fno-strict-aliasing $(INCLUDES) $(DEBUGFLAGS) -Wfatal-errors
+ASFLAGS    += $(CFLAGS) -x assembler-with-cpp
+LDFLAGS    += -Wl,--gc-sections,-Map=$*.map,-cref -T $(LDSCRIPT) $(USER_LDFLAGS) $(CPU)
+ARFLAGS    += cr
 OBJCOPYFLAGS += -Obinary
 OBJDUMPFLAGS += -S
 
@@ -349,10 +384,10 @@ endef
 #***********************************************************************
 
 define STM32CUBEMX_SCRIPT_CONTENTS
-config load stm32cubemx.ioc
+config load $(MAKEFILE_DIR)build/stm32cubemx.ioc
 project name $(STM32CUBEMX_FILE)
 project toolchain TrueSTUDIO
-csv pinout stm32cubemx-pinout.csv
+csv pinout $(MAKEFILE_DIR)build/stm32cubemx-pinout.csv
 project generate
 exit
 endef
@@ -364,12 +399,18 @@ define PINOUT_CSV_TO_H_SCRIPT_CONTENTS
 
 while IFS=, read pos name type signal label 
 do
-  name=$$(echo $$name | sed -e 's/^"\(.*\)"$$/\1/')
-  label=$$(echo $$label | sed -e 's/^"\(.*\)"$$/\1/')
-  if [ "$$label" != '' ] && [ "$$label" != 'Label' ]; then
-    label=$$(echo $${label} | tr a-z A-Z | tr ' ' '_' | tr -cd 'A-Z0-9_')
-    echo "#define PIN_$${label}_PORT GPIO$${name:1:1}"
-    echo "#define PIN_$${label}_PIN GPIO_PIN_$${name:2}"
+  if [ "$$pos" != '"Position"' ]; then
+    name=$$(echo $$name | sed -e 's/^"\(.*\)"$$/\1/' | sed -e 's/\([^-]*\)-\(.*\)$$/\1/')
+    label=$$(echo $$label | sed -e 's/^"\(.*\)"$$/\1/')
+    altLabel=$$(echo $$signal | sed -e 's/^"\(.*\)"$$/\1/')
+    if [ "$$label" == '' ] || [ "$$label" == 'Label' ]; then
+      label=$${altLabel}
+    fi
+    if [ "$$label" != '' ] && [ "$$label" != 'Label' ]; then
+      label=$$(echo $${label} | tr a-z A-Z | tr ' ' '_' | tr -cd 'A-Z0-9_')
+      echo "#define $${label}_PORT GPIO$${name:1:1}"
+      echo "#define $${label}_PIN GPIO_PIN_$${name:2}"
+    fi
   fi
 done < "$${1:-/dev/stdin}"
 endef
@@ -408,16 +449,33 @@ endef
 
 #***********************************************************************
 
-.PHONY: st-util gdb picocom clean erase help
+.PHONY: st-util gdb picocom clean erase write nm format help
 
 all: $(BIN)
 
 help:
 	@echo "st-util   Start st-util"
 	@echo "erase     Erase the device"
+	@echo "write     Write program to the device"
 	@echo "gdb       Start gdb"
 	@echo "picocom   Start picocom"
+	@echo "nm        Stats about size"
+	@echo "format    Format source code"
 
+format:
+	astyle -n \
+		--indent=spaces=2 \
+		--style=attach \
+		--pad-oper \
+		--pad-header \
+		--align-pointer=type \
+		--align-reference=type \
+		--add-brackets \
+		src/*
+
+nm: $(BIN)
+	-$(NM) -A -l -C -td --reverse-sort --size-sort build/main.out
+	
 st-util:
 	@echo "Use lsusb then STLINK_DEVICE=<bus>:<device id> for multiple devices"
 	st-util -v
@@ -425,6 +483,10 @@ st-util:
 erase:
 	@echo "Use lsusb then STLINK_DEVICE=<bus>:<device id> for multiple devices"
 	st-flash erase
+
+write: $(BIN)
+	@echo "Use lsusb then STLINK_DEVICE=<bus>:<device id> for multiple devices"
+	st-flash write $(BIN) $(LINK_FLASH_START)
 
 gdb:
 	$(GDB) -tui -ex "target extended-remote localhost:4242" $(BUILD_DIR)/main.out
@@ -495,10 +557,12 @@ $(BUILD_DIR)/stm32cubemxgen $(BUILD_DIR)/stm32cubemx-pinout.csv: $(STM32CUBEMX_F
 	@mkdir -p $(BUILD_DIR)
 	@echo "$$STM32CUBEMX_SCRIPT_CONTENTS" > $(BUILD_DIR)/stm32cubemx.script
 	@cp $(STM32CUBEMX_FILE) $(BUILD_DIR)/stm32cubemx.ioc
-	cd $(BUILD_DIR); $(STM32CUBEMX) -q stm32cubemx.script
+	cd $(BUILD_DIR); $(STM32CUBEMX) -q $(MAKEFILE_DIR)build/stm32cubemx.script
 	@echo "$$SRC_PATCH_CONTENTS" > $(BUILD_DIR)/src.patch
 	dos2unix $(BUILD_DIR)/Src/main.c
 	-patch -N $(BUILD_DIR)/Src/main.c < $(BUILD_DIR)/src.patch
+	sed -i -- 's/FLASH_BASE[[:space:]]*[(][(]uint32_t[)]0x[0-9a-fA-F]*[)]/FLASH_BASE            ((uint32_t)$(LINK_FLASH_START))/g' $(BUILD_DIR)/Drivers/CMSIS/Device/ST/$(DEVICE_FAMILY)/Include/*
+	sed -i -- 's/DATA_EEPROM_BASE[[:space:]]*[(][(]uint32_t[)]0x[0-9a-fA-F]*[)]/DATA_EEPROM_BASE      ((uint32_t)$(LINK_DATA_EEPROM_START))/g' $(BUILD_DIR)/Drivers/CMSIS/Device/ST/$(DEVICE_FAMILY)/Include/*
 	touch $(BUILD_DIR)/stm32cubemxgen
 
 $(BUILD_DIR)/pinout-csv-to-h.sh:
