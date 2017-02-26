@@ -136,7 +136,7 @@ OBJDUMP = $(SYSTEM)-objdump
 GDB     = $(SYSTEM)-gdb
 SIZE    = $(SYSTEM)-size
 NM      = $(SYSTEM)-nm
-STM32CUBEMX = /opt/STM32CubeMX/STM32CubeMX
+STM32CUBEMX = stm32cubemx
 
 INCLUDES =
 CFLAGS   = 
@@ -455,6 +455,7 @@ all: $(BIN)
 
 help:
 	@echo "st-util   Start st-util"
+	@echo "openocd   Start openocd"
 	@echo "erase     Erase the device"
 	@echo "write     Write program to the device"
 	@echo "gdb       Start gdb"
@@ -478,7 +479,12 @@ nm: $(BIN)
 	
 st-util:
 	@echo "Use lsusb then STLINK_DEVICE=<bus>:<device id> for multiple devices"
-	st-util -v
+	st-util -m -v
+
+openocd:
+	@mkdir -p $(BUILD_DIR)
+	@echo "gdb_port 4242" > $(BUILD_DIR)/openocd.cfg
+	openocd -f interface/stlink-v2.cfg -f target/stm32f1x.cfg -f $(BUILD_DIR)/openocd.cfg
 
 erase:
 	@echo "Use lsusb then STLINK_DEVICE=<bus>:<device id> for multiple devices"
@@ -486,7 +492,7 @@ erase:
 
 write: $(BIN)
 	@echo "Use lsusb then STLINK_DEVICE=<bus>:<device id> for multiple devices"
-	st-flash write $(BIN) $(LINK_FLASH_START)
+	st-flash --reset write $(BIN) $(LINK_FLASH_START)
 
 gdb:
 	$(GDB) -tui -ex "target extended-remote localhost:4242" $(BUILD_DIR)/main.out
@@ -560,7 +566,7 @@ $(BUILD_DIR)/stm32cubemxgen $(BUILD_DIR)/stm32cubemx-pinout.csv: $(STM32CUBEMX_F
 	cd $(BUILD_DIR); $(STM32CUBEMX) -q $(MAKEFILE_DIR)build/stm32cubemx.script
 	@echo "$$SRC_PATCH_CONTENTS" > $(BUILD_DIR)/src.patch
 	dos2unix $(BUILD_DIR)/Src/main.c
-	-patch -N $(BUILD_DIR)/Src/main.c < $(BUILD_DIR)/src.patch
+	patch -N $(BUILD_DIR)/Src/main.c < $(BUILD_DIR)/src.patch
 	sed -i -- 's/FLASH_BASE[[:space:]]*[(][(]uint32_t[)]0x[0-9a-fA-F]*[)]/FLASH_BASE            ((uint32_t)$(LINK_FLASH_START))/g' $(BUILD_DIR)/Drivers/CMSIS/Device/ST/$(DEVICE_FAMILY)/Include/*
 	sed -i -- 's/DATA_EEPROM_BASE[[:space:]]*[(][(]uint32_t[)]0x[0-9a-fA-F]*[)]/DATA_EEPROM_BASE      ((uint32_t)$(LINK_DATA_EEPROM_START))/g' $(BUILD_DIR)/Drivers/CMSIS/Device/ST/$(DEVICE_FAMILY)/Include/*
 	touch $(BUILD_DIR)/stm32cubemxgen

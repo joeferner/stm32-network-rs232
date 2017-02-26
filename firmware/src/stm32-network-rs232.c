@@ -2,24 +2,17 @@
 #include <version.h>
 #include <stdio.h>
 #include <string.h>
-#include "platform_config.h"
+#include <stdint.h>
 #include <utils/debug.h>
-#include <contiki/core/sys/process.h>
-#include <contiki/core/sys/etimer.h>
-#include <contiki/core/net/ip/tcpip.h>
+#include <utils/time.h>
+#include "platform_config.h"
 #include "rs232.h"
 #include "network.h"
 
-uint8_t MAC_ADDRESS[6] = {0xa4, 0x6f, 0xa7, 0xa5, 0x25, 0xd2};
-
 void setup() {
   printf("setup\n");
-  
-  HAL_IWDG_Start(&hiwdg);
 
-  process_init();
-  process_start(&etimer_process, NULL);
-  process_start(&tcpip_process, NULL);
+  HAL_IWDG_Start(&hiwdg);
 
   debug_setup();
   rs232_setup();
@@ -29,21 +22,30 @@ void setup() {
 }
 
 void loop() {
-  process_run();
-}
-
-void uip_log(char *msg) {
-  //printf("contiki: %s\n", msg);
+  HAL_IWDG_Refresh(&hiwdg);
+  debug_tick();
+  rs232_tick();
+  network_tick();
 }
 
 void debug_processLine(const char* line) {
   if (strlen(line) == 0) {
-  } else if(strncmp(line, "tx", 2) == 0) {
+  } else if (strncmp(line, "tx", 2) == 0) {
     strcat((char*)line, "\r\n");
     rs232_tx(line + 3);
-  } else if(strcmp(line, "testiwdg") == 0) {
+  } else if (strncmp(line, "send", 4) == 0) {
+    network_sendToAllTelnetConnections(line + 5);
+  } else if (strcmp(line, "testiwdg") == 0) {
     printf("testing IWDG\n");
-    while(1);
+    while (1) {
+      sleep_ms(1000);
+      printf("waiting for IWDG\n");
+    }
+  } else if (strcmp(line, "dhcp renew") == 0) {
+    printf("DHCP renew\n");
+    network_dhcpRenew();
+  } else if (strcmp(line, "ifconfig") == 0) {
+    network_ifconfig();
   } else {
     printf("invalid debug command: %s\n", line);
   }
@@ -52,6 +54,10 @@ void debug_processLine(const char* line) {
 
 void rs232_processLine(const char* line) {
   printf("rs232rx: \"%s\"\n", line);
-  network_txLastAddr(line);
+  network_sendToAllTelnetConnections(line);
 }
 
+void network_handleTelnetReceive(const char* line) {
+  printf("networkRx: \"%s\"\n", line);
+  rs232_tx(line);
+}

@@ -4,6 +4,15 @@
 
 #include <pinout.h>
 
+//#define ENC28J60_DEBUG
+//#define ARP_DEBUG
+//#define DHCP_DEBUG
+#define NETWORK_DEBUG
+//#define TCP_DEBUG
+//#define NETWORK_INTERFACE_DEBUG
+//#define ICMP_DEBUG
+#define RS232_DEBUG
+
 extern uint8_t MAC_ADDRESS[6];
 #define UDP_PORT            9000
 

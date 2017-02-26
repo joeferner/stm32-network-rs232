@@ -1,178 +1,193 @@
 
 #include <stdio.h>
-#include <contiki/core/sys/process.h>
-#include <contiki/core/net/ip/uip.h>
-#include <contiki/core/net/ipv4/uip_arp.h>
-#include <contiki/dev/enc28j60/enc28j60.h>
-#include <contiki/core/net/ip/uip.h>
-#include <contiki/core/net/ip/uip-udp-packet.h>
+#include <string.h>
 #include <utils/time.h>
+#include <enc28j60/enc28j60.h>
+#include <network/interface.h>
+#include <network/dhcp.h>
+#include <network/mac.h>
+#include <network/tcp.h>
+#include <utils/utils.h>
+#include <utils/ringbuffer.h>
+#include "network.h"
 #include "platform_config.h"
-#include "rs232.h"
 
-PROCESS(network_process, "network");
-PROCESS(rs232udp_process, "RS232UDP server");
+#ifdef NETWORK_DEBUG
+#define NETWORK_DEBUG_OUT(format, ...) printf("%s:%d: network: " format, __FILE__, __LINE__, ##__VA_ARGS__)
+#else
+#define NETWORK_DEBUG_OUT(format, ...)
+#endif
 
-#define UDP_HDR      ((struct uip_udpip_hdr *)&uip_buf[UIP_LLH_LEN])
+#define TELNET_PORT 23
+#define TELNET_CONNECTION_COUNT 5
 
-static struct uip_udp_conn *_network_rs232udp_server_conn;
-static uip_ipaddr_t _network_rs232udp_last_ip;
-uint16_t _network_rs232udp_last_port;
+uint8_t MAC_ADDRESS[6] = {0xa4, 0x6f, 0xa7, 0xa5, 0x25, 0xd2};
+const char* HOST_NAME = "epson-projector";
 
-uint8_t enc28j60_tcp_output();
+typedef enum {
+  NETWORK_STATE_INIT,
+  NETWORK_STATE_WAITING_FOR_DHCP_RESPONSE,
+  NETWORK_STATE_DHCP_COMPLETE
+} NetworkState;
+
+NetworkInterface _network_nic;
+ENC28J60 _network_enc28j60;
+NetworkState _network_state;
+uint32_t _network_lastStateChange;
+TCP_Server _network_telnetServer;
+TCP_Connection _network_telnetServerConnections[TELNET_CONNECTION_COUNT];
+
+#define NETWORK_RX_BUFFER_SIZE 32
+RingBufferU8 networkRxRing;
+uint8_t networkRxBuffer[NETWORK_RX_BUFFER_SIZE];
+
+uint32_t _network_receive(NetworkInterface* nic, uint8_t* buffer, uint32_t len);
+uint32_t _network_send(NetworkInterface* nic, uint8_t* buffer, uint32_t len);
+void _network_setState(NetworkState newState);
+void _network_stateInit();
+void _network_stateWaitingForDhcpResponse();
+void _network_telnetConnect(NetworkInterface* nic, TCP_Connection* conn);
+void _network_telnetDisconnect(NetworkInterface* nic, TCP_Connection* conn);
+void _network_telnetReceive(NetworkInterface* nic, TCP_Connection* conn, uint8_t* data, uint32_t dataLength);
 
 void network_setup() {
-  printf("network_setup\n");
+  NETWORK_DEBUG_OUT("network_setup\n");
+
+  RingBufferU8_init(&networkRxRing, networkRxBuffer, NETWORK_RX_BUFFER_SIZE);
   
-  uip_ipaddr_t ipaddr;
-  uip_ipaddr_t gatewayAddr;
-  uip_ipaddr_t netmaskAddr;
+  _network_setState(NETWORK_STATE_INIT);
 
-  uip_lladdr.addr[0] = MAC_ADDRESS[0];
-  uip_lladdr.addr[1] = MAC_ADDRESS[1];
-  uip_lladdr.addr[2] = MAC_ADDRESS[2];
-  uip_lladdr.addr[3] = MAC_ADDRESS[3];
-  uip_lladdr.addr[4] = MAC_ADDRESS[4];
-  uip_lladdr.addr[5] = MAC_ADDRESS[5];
+  NetworkInterface_init(&_network_nic, MAC_ADDRESS, _network_receive, _network_send);
+  _network_nic.hostName = HOST_NAME;
 
-  uip_ipaddr(&ipaddr, 192, 168, 0, 101);
-  uip_sethostaddr(&ipaddr);
+  _network_enc28j60.spi = &ENC28J60_SPI;
+  _network_enc28j60.csPort = ENC28J60_CS_PORT;
+  _network_enc28j60.csPin = ENC28J60_CS_PIN;
+  _network_enc28j60.resetPort = ENC28J60_RESET_PORT;
+  _network_enc28j60.resetPin = ENC28J60_RESET_PIN;
+  memcpy(_network_enc28j60.macAddress, MAC_ADDRESS, MAC_ADDRESS_LENGTH);
+  HAL_StatusTypeDef status = ENC28J60_setup(&_network_enc28j60);
+  if (status != HAL_OK) {
+    printf("error with enc28j60 setup\n");
+    while (1);
+  }
+  sleep_ms(100);
 
-  uip_ipaddr(&gatewayAddr, 192, 168, 0, 1);
-  uip_setdraddr(&gatewayAddr);
-
-  uip_ipaddr(&netmaskAddr, 255, 255, 255, 0);
-  uip_setnetmask(&netmaskAddr);
-
-  tcpip_set_outputfunc(enc28j60_tcp_output);
-  enc28j60_init(uip_lladdr.addr);
-  
-  uip_init();
-
-  uip_arp_init();
-  
-  printf("Start RS232UDP Process\n");
-  process_start(&rs232udp_process, NULL);
-
-  printf("Start network Process\n");
-  process_start(&network_process, NULL);
-
-  printf("END network_setup\n");
+  TCP_listen(
+    &_network_nic,
+    &_network_telnetServer,
+    TELNET_PORT,
+    _network_telnetServerConnections,
+    TELNET_CONNECTION_COUNT,
+    _network_telnetConnect,
+    _network_telnetDisconnect,
+    _network_telnetReceive
+  );
 }
 
-uint8_t enc28j60_tcp_output() {
-  uip_arp_out();
-  enc28j60_send(uip_buf, uip_len + sizeof(struct uip_eth_hdr));
-  return 0;
+uint32_t _network_receive(NetworkInterface* nic, uint8_t* buffer, uint32_t len) {
+  return ENC28J60_receive(&_network_enc28j60, buffer, len);
 }
 
-void network_txLastAddr(const char* str) {
-  uip_udp_packet_sendto(_network_rs232udp_server_conn, str, strlen(str), &_network_rs232udp_last_ip, UIP_HTONS(_network_rs232udp_last_port));
+uint32_t _network_send(NetworkInterface* nic, uint8_t* buffer, uint32_t len) {
+  return ENC28J60_send(&_network_enc28j60, buffer, len);
 }
 
-PROCESS_THREAD(network_process, ev, data) {
-  PROCESS_BEGIN();
-  
-  while(1) {
-    PROCESS_PAUSE();
-    uip_len = enc28j60_read(uip_buf, UIP_BUFSIZE);
-    if (uip_len > 0) {
-      HAL_IWDG_Refresh(&hiwdg);
-      
-      struct uip_eth_hdr *header = ((struct uip_eth_hdr *)&uip_buf[0]);
-      uint16_t packetType = header->type;
+void network_tick() {
+  NetworkInterface_tick(&_network_nic);
+  ENC28J60_tick(&_network_enc28j60);
+  switch (_network_state) {
+  case NETWORK_STATE_INIT:
+    _network_stateInit();
+    break;
+  case NETWORK_STATE_WAITING_FOR_DHCP_RESPONSE:
+    _network_stateWaitingForDhcpResponse();
+    break;
+  case NETWORK_STATE_DHCP_COMPLETE:
+    break;
+  }
+}
 
-      #ifdef ENC28J60_DEBUG
-	printf("?receivePacket: len: %d, dest: %02x:%02x:%02x:%02x:%02x:%02x, src: %02x:%02x:%02x:%02x:%02x:%02x, type: %d\n",
-	      uip_len,
-	      header->dest.addr[0], header->dest.addr[1], header->dest.addr[2], header->dest.addr[3], header->dest.addr[4], header->dest.addr[5],
-	      header->src.addr[0], header->src.addr[1], header->src.addr[2], header->src.addr[3], header->src.addr[4], header->src.addr[5],
-	      packetType
-	      );
-	for (int i = 0; i < uip_len; i++) {
-	  printf("%02x ", uip_buf[i]);
-	}
-	printf("\n");
-      #endif
+void _network_setState(NetworkState newState) {
+  _network_state = newState;
+  _network_lastStateChange = HAL_GetTick();
+  NETWORK_DEBUG_OUT("state %d\n", _network_state);
+}
 
-      if (packetType == UIP_HTONS(UIP_ETHTYPE_IP)) {
-	#ifdef ENC28J60_DEBUG
-	  printf("?readPacket type IP\n");
-	#endif
-	uip_arp_ipin();
-	uip_input();
-	if (uip_len > 0) {
-	  uip_arp_out();
-	  enc28j60_send(uip_buf, uip_len + sizeof(struct uip_eth_hdr));
-	}
-      } else if (packetType == UIP_HTONS(UIP_ETHTYPE_ARP)) {
-	#ifdef ENC28J60_DEBUG
-	  printf("?readPacket type ARP\n");
-	#endif
-	uip_arp_arpin();
-	if (uip_len > 0) {
-	  enc28j60_send(uip_buf, uip_len + sizeof(struct uip_eth_hdr));
-	}
-      }
+void network_dhcpRenew() {
+  DHCP_sendDiscover(&_network_nic);
+  _network_setState(NETWORK_STATE_WAITING_FOR_DHCP_RESPONSE);
+}
+
+void network_ifconfig() {
+  char buffer[100];
+
+  MAC_macToString(buffer, _network_nic.macAddress);
+  printf("MAC Address: %s\n", buffer);
+  printf("  Host name: %s\n", _network_nic.hostName);
+  IPV4_ipToString(buffer, _network_nic.ipAddress);
+  printf(" IP Address: %s\n", buffer);
+  IPV4_ipToString(buffer, _network_nic.subnetMask);
+  printf("Subnet Mask: %s\n", buffer);
+  IPV4_ipToString(buffer, _network_nic.router);
+  printf("    Gateway: %s\n", buffer);
+  for (int i = 0; i < NETWORK_INTERFACE_MAX_DNS_COUNT; i++) {
+    if (_network_nic.dnsServers[i] != 0) {
+      IPV4_ipToString(buffer, _network_nic.dnsServers[i]);
+      printf(" DNS Server: %s\n", buffer);
     }
   }
-  
-  PROCESS_END();
 }
 
-PROCESS_THREAD(rs232udp_process, ev, data) {
-  PROCESS_BEGIN();
+void _network_stateInit() {
+  network_dhcpRenew();
+}
 
-  _network_rs232udp_server_conn = udp_new(NULL, UIP_HTONS(0), NULL);
-  udp_bind(_network_rs232udp_server_conn, UIP_HTONS(UDP_PORT));
-  
-  while (1) {
-    PROCESS_WAIT_EVENT_UNTIL(ev == tcpip_event);
-    if(uip_newdata()) {
-      uip_ipaddr_copy(&_network_rs232udp_last_ip, &UDP_HDR->srcipaddr);
-      _network_rs232udp_last_port = UIP_HTONS(UDP_HDR->srcport);
-      
-      ((char *)uip_appdata)[uip_datalen()] = 0;
-      printf("rs232udp %d.%d.%d.%d:%d rx: '%s'\n",
-	     _network_rs232udp_last_ip.u8[0],
-	     _network_rs232udp_last_ip.u8[1],
-	     _network_rs232udp_last_ip.u8[2],
-	     _network_rs232udp_last_ip.u8[3],
-	     _network_rs232udp_last_port,
-	     (char *)uip_appdata);
-      rs232_tx((char *)uip_appdata);
+void _network_stateWaitingForDhcpResponse() {
+  if (_network_nic.ipAddress != 0 ) {
+    _network_setState(NETWORK_STATE_DHCP_COMPLETE);
+  } else if (HAL_GetTick() - _network_lastStateChange > 5000) {
+    _network_setState(NETWORK_STATE_INIT);
+  }
+}
+
+void _network_telnetConnect(NetworkInterface* nic, TCP_Connection* conn) {
+#ifdef NETWORK_DEBUG
+  char macAddressString[25];
+  char ipAddressString[25];
+  MAC_macToString(macAddressString, conn->remoteMac);
+  IPV4_ipToString(ipAddressString, conn->remoteIpAddress);
+  NETWORK_DEBUG_OUT("telnet connect %s %s:%d\n", macAddressString, ipAddressString, conn->remotePort);
+#endif
+}
+
+void _network_telnetDisconnect(NetworkInterface* nic, TCP_Connection* conn) {
+  NETWORK_DEBUG_OUT("telnet disconnect\n");
+}
+
+void network_sendToAllTelnetConnections(const char* line) {
+  for (int i = 0; i < TELNET_CONNECTION_COUNT; i++) {
+    TCP_Connection* conn = &_network_telnetServerConnections[i];
+    if (TCP_isConnected(conn)) {
+      NETWORK_DEBUG_OUT("sending to %d: %s\n", i, line);
+      TCP_send(&_network_nic, conn, (uint8_t*)line, strlen(line));
     }
   }
-
-  PROCESS_END();
 }
 
-void enc28j60_arch_spi_init(void) {
-  enc28j60_arch_spi_deselect();
-  HAL_GPIO_WritePin(PIN_ENC28J60_RESET_PORT, PIN_ENC28J60_RESET_PIN, GPIO_PIN_RESET);
-  sleep_ms(50);
-  HAL_GPIO_WritePin(PIN_ENC28J60_RESET_PORT, PIN_ENC28J60_RESET_PIN, GPIO_PIN_SET);
-  sleep_ms(1000);
-}
-
-uint8_t enc28j60_arch_spi_write(uint8_t data) {
-  uint8_t tx = data;
-  uint8_t rx;
-  HAL_StatusTypeDef status;
-  if((status = HAL_SPI_TransmitReceive(&ENC28J60_SPI, &tx, &rx, 1, MAX_TIMEOUT)) != HAL_OK) {
-    printf("spi write error %d\n", status);
+void _network_telnetReceive(NetworkInterface* nic, TCP_Connection* conn, uint8_t* data, uint32_t dataLength) {
+  NETWORK_DEBUG_OUT("telnet receive\n");
+#ifdef NETWORK_DEBUG
+  printMemory(data, dataLength);
+#endif
+  if (dataLength > 0 && data[0] == 0xff) {
+    NETWORK_DEBUG_OUT("telnet setup (skipping)\n");
+    return;
   }
-  return rx;
-}
-
-uint8_t enc28j60_arch_spi_read(void) {
-  return enc28j60_arch_spi_write(0);
-}
-
-void enc28j60_arch_spi_select(void) {
-  HAL_GPIO_WritePin(PIN_ENC28J60_CS_PORT, PIN_ENC28J60_CS_PIN, GPIO_PIN_RESET);
-}
-
-void enc28j60_arch_spi_deselect(void) {
-  HAL_GPIO_WritePin(PIN_ENC28J60_CS_PORT, PIN_ENC28J60_CS_PIN, GPIO_PIN_SET);
+  RingBufferU8_write(&networkRxRing, data, dataLength);
+  
+  char line[NETWORK_RX_BUFFER_SIZE];
+  if (RingBufferU8_readLine(&networkRxRing, line, NETWORK_RX_BUFFER_SIZE) > 0) {
+    network_handleTelnetReceive(line);
+  }
 }

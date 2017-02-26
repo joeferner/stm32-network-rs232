@@ -1,6 +1,9 @@
-[submodule "firmware/libs/contiki"]
-	path = firmware/libs/contiki
-	url = git@github.com:contiki-os/contiki.git
 [submodule "firmware/libs/utils"]
 	path = firmware/libs/utils
 	url = git@github.com:joeferner/stm32-utils.git
+[submodule "firmware/libs/enc28j60"]
+	path = firmware/libs/enc28j60
+	url = git@github.com:joeferner/stm32-enc28j60.git
+[submodule "firmware/libs/network"]
+	path = firmware/libs/network
+	url = git@github.com:joeferner/stm32-network.git
